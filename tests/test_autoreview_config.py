@@ -7,7 +7,7 @@ from autoreview_config import (auto_repos, list_repos, load_config,
 NEW_YML = """
 org: nexpeakcore
 default_mode: manual
-interval_minutes: 10
+interval_minutes: 2
 post_comment: true
 skip_human: true
 drafts: false
@@ -27,7 +27,7 @@ def test_load_config_new_format(tmp_path):
     assert cfg["org"] == "nexpeakcore"
     assert cfg["default_mode"] == "manual"
     assert cfg["repos"] == {"sample-app": "auto", "sample-api": "auto"}
-    assert cfg["interval_minutes"] == 10
+    assert cfg["interval_minutes"] == 2
 
 
 def test_load_config_legacy_list(tmp_path):

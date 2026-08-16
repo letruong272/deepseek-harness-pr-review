@@ -80,7 +80,7 @@ from the web dashboard (repo list page → toggle Auto/Manual).
 # autoreview.yml
 org: nexpeakcore            # default org for repo discovery
 default_mode: manual        # repos not listed → manual
-interval_minutes: 10
+interval_minutes: 2
 post_comment: true
 skip_human: true
 drafts: false
@@ -97,7 +97,7 @@ python -m src.autoreview --once          # single pass (cron/launchd)
 python -m src.autoreview --daemon        # loop every interval_minutes
 ```
 
-launchd example:
+launchd example (auto-start on login, every 2 minutes):
 
 ```xml
 <?xml version="1.0" encoding="UTF-8"?>
@@ -108,18 +108,25 @@ launchd example:
   <key>Label</key><string>com.nexpeak.pr-review</string>
   <key>ProgramArguments</key>
   <array>
-    <string>/Users/gianglh/work/harness/.venv/bin/python</string>
-    <string>-m</string><string>src.autoreview</string><string>--once</string>
+    <string>/Users/gianglh/work/harness/scripts/autoreview-once.sh</string>
   </array>
-  <key>WorkingDirectory</key><string>/Users/gianglh/work/harness</string>
-  <key>EnvironmentVariables</key>
-  <dict>
-    <key>PYTHONPATH</key><string>src</string>
-    <key>DEEPSEEK_API_KEY</key><string>your-key</string>
-  </dict>
-  <key>StartInterval</key><integer>600</integer>
+  <key>RunAtLoad</key>
+  <true/>
+  <key>StartInterval</key><integer>120</integer>
+  <key>StandardOutPath</key>
+  <string>/Users/gianglh/work/harness/autoreview.log</string>
+  <key>StandardErrorPath</key>
+  <string>/Users/gianglh/work/harness/autoreview.log</string>
 </dict>
 </plist>
+```
+
+`scripts/autoreview-once.sh` sources `.env` (API key stays out of the plist).
+Install:
+
+```bash
+cp com.nexpeak.pr-review.plist ~/Library/LaunchAgents/
+launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/com.nexpeak.pr-review.plist
 ```
 
 Re-review rules: head SHA in the PR changed vs the last snapshot → all phases

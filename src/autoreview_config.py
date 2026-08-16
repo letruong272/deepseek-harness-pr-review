@@ -7,7 +7,7 @@ import yaml
 DEFAULTS = {
     "org": "",
     "default_mode": "manual",
-    "interval_minutes": 10,
+    "interval_minutes": 2,
     "post_comment": True,
     "skip_human": True,
     "drafts": False,
