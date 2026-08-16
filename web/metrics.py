@@ -216,7 +216,20 @@ def open_prs(session_root: Path, owner: str, repo: str, gh=None) -> list[dict]:
         n = int(p["number"])
         seen.add(n)
         d = session_dir / f"pr-{n}"
-        if (d / "findings.json").exists():
+        info = review_process_info(d)
+        if info:  # lock sống → đang review/re-review (kể cả khi đã có findings)
+            rec = pr_record(session_root, owner, repo, n) if (d / "findings.json").exists() else None
+            rows.append({
+                "pr": n, "title": p.get("title", ""),
+                "draft": bool(p.get("draft")),
+                "status": "reviewing", "rounds": None,
+                "pid": info["pid"],
+                "started_at": info["started_at"],
+                "bugs": rec["bugs"] if rec else None,
+                "doc_errors": rec["doc_errors"] if rec else None,
+                "unavailable": unavailable,
+            })
+        elif (d / "findings.json").exists():
             rec = pr_record(session_root, owner, repo, n)
             rows.append({
                 "pr": n, "title": p.get("title", ""),

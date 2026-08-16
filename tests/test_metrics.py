@@ -206,3 +206,21 @@ def test_open_prs_gh_failure(tmp_path):
     # gh lỗi → trả PR đã review từ sessions, đánh dấu unavailable
     assert rows[0]["pr"] == 7
     assert rows[0]["unavailable"] is True
+
+
+def test_open_prs_reviewing_with_existing_findings(tmp_path):
+    # PR đã review nhưng lock sống (re-review đang chạy) → vẫn hiện reviewing
+    root = tmp_path / "sessions"
+    _write_session(root, "o", "r", 7, snapshot=SNAPSHOT,
+                   findings=EMPTY_FINDINGS)
+    lock = root / "o" / "r" / "pr-7" / "review.lock"
+    lock.parent.mkdir(parents=True, exist_ok=True)
+    import os
+    lock.write_text('{"pid": %d, "started_at": "2026-08-16T10:00:00"}'
+                    % os.getpid())
+
+    rows = metrics.open_prs(
+        root, "o", "r",
+        gh=lambda args, **kw: [{"number": 7, "title": "T7", "draft": False}])
+    assert rows[0]["status"] == "reviewing"
+    assert rows[0]["pid"] == os.getpid()
