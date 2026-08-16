@@ -104,10 +104,10 @@ STATUS_COLORS = {
 
 
 def _badge(text: str, color: str) -> str:
-    """Colored badge span (GitHub allows inline styles in comments)."""
-    return (f'<span style="background-color:{color};color:#fff;'
+    """Badge with a colored dot + tinted background (GitHub allows inline styles)."""
+    return (f'<span style="background-color:{color}1A;color:{color};'
             f'padding:2px 10px;border-radius:10px;font-size:12px;'
-            f'font-weight:600">{text}</span>')
+            f'font-weight:600">● {text}</span>')
 
 
 def _html_cell(text, color=None):

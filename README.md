@@ -39,7 +39,7 @@ status. Live demo data is included — see [Web dashboard](#web-dashboard).
 | ✅ **Requirement impact** | `CHANGED / BROKEN / RISK` analysis per business requirement |
 | ✅ **Human-in-the-loop** | ≤20-word confirmation questions only when uncertain — no guessing |
 | ✅ **Auto review poller** | Reviews new PRs automatically, re-reviews when the head commit changes |
-| ✅ **Web dashboard** | Read-only metrics: bugs, doc errors, verdicts, review rounds per repo |
+| ✅ **Web dashboard** | Repo config management, review triggers (Review now), live review logs, metrics: bugs, doc errors, verdicts, review rounds per repo |
 | ✅ **Idempotent PR comments** | One English comment per PR, updated in place — never duplicated |
 | ✅ **Traceable** | Every phase writes structured JSON to `sessions/` |
 
