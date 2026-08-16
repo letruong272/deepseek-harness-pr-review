@@ -47,7 +47,18 @@ status. Live demo data is included — see [Web dashboard](#web-dashboard).
 
 Requirements: Python 3.10+ (recommended 3.11), `gh` CLI already authenticated.
 
-**Quick install (from GitHub, no clone needed):**
+**One-liner (recommended — auto-detects Python, creates a venv, fixes PATH):**
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/nexpeakcore/deepseek-harness-pr-review/main/scripts/install.sh | bash
+```
+
+The installer finds a Python 3.10+ interpreter (falls back to Homebrew on
+macOS), creates an isolated venv at `~/.harness-pr-review/venv`, installs the
+package from GitHub, symlinks `harness-pr-review` + `autoreview` into
+`~/.local/bin`, and runs `doctor`. Re-running it updates to the latest version.
+
+**Or install manually:**
 
 ```bash
 pip install git+https://github.com/nexpeakcore/deepseek-harness-pr-review.git
