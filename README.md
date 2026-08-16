@@ -108,7 +108,7 @@ pip install -e .       # refresh entry points if pyproject.toml changed
 - The auto-review poller (launchd/cron) picks up the new code on its next
   pass — no restart needed.
 - A running web dashboard keeps the old code until restarted: stop the
-  process, then start it again (`python -m web.server`).
+  process, then start it again (`harness-pr-review web`).
 - Your existing `sessions/` data and `autoreview.yml` are preserved — updates
   never touch them.
 
@@ -154,8 +154,8 @@ per repo). Reads `sessions/` directly — no database.
 
 ```bash
 pip install -e '.[web]'
-DSH_SESSION_ROOT=sessions python -m web.server
-# open http://127.0.0.1:6789
+DSH_SESSION_ROOT=sessions harness-pr-review web
+harness-pr-review web   # open http://127.0.0.1:6789
 ```
 
 Pages: repo list → repo detail (KPIs + verdict donut + PR table) → PR detail
