@@ -2,9 +2,9 @@
 import json
 import os
 
-from autoreview import (_acquire_lock, _release_lock, decide_pr, main,
+from src.autoreview import (_acquire_lock, _release_lock, decide_pr, main,
                                    plan_reviews, run_pass)
-from autoreview_config import load_config
+from src.autoreview_config import load_config
 
 EMPTY_FINDINGS = {"claims": [], "docs": [], "impact": [], "threads": [],
                   "unresolved_questions": []}
@@ -100,7 +100,7 @@ def test_run_pass_skips_manual(tmp_path, monkeypatch):
         return prs_by_repo[repo_ref]
 
     dispatched = []
-    monkeypatch.setattr("autoreview._dispatch",
+    monkeypatch.setattr("src.autoreview._dispatch",
                         lambda c, o, r, n, sha: (dispatched.append((o, r, n)) or 0))
     count = run_pass(cfg, root, dry_run=False, gh=fake_gh)
     assert count == 1
@@ -110,7 +110,7 @@ def test_run_pass_skips_manual(tmp_path, monkeypatch):
 def test_main_add_repo_writes_config(tmp_path, monkeypatch):
     cfg_path = tmp_path / "autoreview.yml"
     cfg_path.write_text("org: sample-org\nrepos:\n  sample-app: manual\n")
-    monkeypatch.setattr("autoreview.CONFIG_PATH", cfg_path)
+    monkeypatch.setattr("src.autoreview.CONFIG_PATH", cfg_path)
     code = main(["--add-repo", "admin-web", "--mode", "auto"])
     assert code == 0
     cfg = load_config(cfg_path)
@@ -121,7 +121,7 @@ def test_main_add_repo_writes_config(tmp_path, monkeypatch):
 def test_main_rm_repo(tmp_path, monkeypatch):
     cfg_path = tmp_path / "autoreview.yml"
     cfg_path.write_text("org: sample-org\nrepos:\n  sample-app: auto\n")
-    monkeypatch.setattr("autoreview.CONFIG_PATH", cfg_path)
+    monkeypatch.setattr("src.autoreview.CONFIG_PATH", cfg_path)
     code = main(["--rm-repo", "sample-app"])
     assert code == 0
     assert load_config(cfg_path)["repos"] == {}
@@ -130,7 +130,7 @@ def test_main_rm_repo(tmp_path, monkeypatch):
 def test_main_repos_lists_status(tmp_path, monkeypatch, capsys):
     cfg_path = tmp_path / "autoreview.yml"
     cfg_path.write_text("repos:\n  sample-app: auto\n")
-    monkeypatch.setattr("autoreview.CONFIG_PATH", cfg_path)
+    monkeypatch.setattr("src.autoreview.CONFIG_PATH", cfg_path)
     code = main(["--repos"])
     assert code == 0
     out = capsys.readouterr().out
@@ -148,7 +148,7 @@ def test_run_pass_skips_manual_review_lock(tmp_path, monkeypatch, capsys):
     lock.touch()
 
     dispatched = []
-    monkeypatch.setattr("autoreview._dispatch",
+    monkeypatch.setattr("src.autoreview._dispatch",
                         lambda c, o, r, n, sha: (dispatched.append((o, r, n)) or 0))
     count = run_pass(cfg, root, dry_run=False,
                      gh=lambda args, **kw: [{"number": 1, "head": {"sha": "a"},
@@ -182,14 +182,14 @@ def test_plan_reviews_bots_when_disabled(tmp_path):
 
 
 def test_acquire_lock_stale_pid(tmp_path, monkeypatch):
-    monkeypatch.setattr("autoreview.LOCK_PATH", tmp_path / "autoreview.lock")
+    monkeypatch.setattr("src.autoreview.LOCK_PATH", tmp_path / "autoreview.lock")
     (tmp_path / "autoreview.lock").write_text("999999")  # PID chết
     assert _acquire_lock() is True
     _release_lock()
 
 
 def test_acquire_lock_alive(tmp_path, monkeypatch):
-    monkeypatch.setattr("autoreview.LOCK_PATH", tmp_path / "autoreview.lock")
+    monkeypatch.setattr("src.autoreview.LOCK_PATH", tmp_path / "autoreview.lock")
     (tmp_path / "autoreview.lock").write_text(str(os.getpid()))  # PID sống
     assert _acquire_lock() is False
 
@@ -217,3 +217,23 @@ def test_decide_pr_complete_review_skips(tmp_path):
     os.utime(d / "snapshot.json", (1699999000, 1699999000))
     os.utime(d / "findings.json", (1700000000, 1700000000))  # mới hơn
     assert decide_pr(root, "o", "r", 5, "abc") == "SKIP"
+
+
+def test_main_add_repo_url(tmp_path, monkeypatch):
+    cfg_path = tmp_path / "autoreview.yml"
+    cfg_path.write_text("org: sample-org\nrepos:\n  sample-app: manual\n")
+    monkeypatch.setattr("src.autoreview.CONFIG_PATH", cfg_path)
+    code = main(["--add-repo", "https://github.com/sample-org/sample-api",
+                 "--mode", "auto"])
+    assert code == 0
+    cfg = load_config(cfg_path)
+    assert cfg["repos"]["sample-org/sample-api"] == "auto"
+
+
+def test_main_add_repo_bare_name_uses_org(tmp_path, monkeypatch):
+    cfg_path = tmp_path / "autoreview.yml"
+    cfg_path.write_text("org: sample-org\nrepos:\n  sample-app: manual\n")
+    monkeypatch.setattr("src.autoreview.CONFIG_PATH", cfg_path)
+    code = main(["--add-repo", "sample-app2", "--mode", "auto"])
+    assert code == 0
+    assert load_config(cfg_path)["repos"]["sample-app2"] == "auto"

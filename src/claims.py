@@ -3,7 +3,7 @@ import json
 import re
 from pathlib import Path
 
-from llm import chat as _default_chat
+from src.llm import chat as _default_chat
 
 SCHEMA_HINT = """
 Split the PR description below into verifiable claims (each claim must be

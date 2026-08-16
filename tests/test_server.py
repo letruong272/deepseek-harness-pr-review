@@ -5,7 +5,7 @@ import os
 import pytest
 from fastapi.testclient import TestClient
 
-from autoreview_config import load_config
+from src.autoreview_config import load_config
 from web.server import app
 
 EMPTY_FINDINGS = {"claims": [], "docs": [], "impact": [], "threads": [],
@@ -64,7 +64,7 @@ def test_repo_list_empty_state(tmp_path, monkeypatch):
 
 
 def test_repo_page(client, monkeypatch):
-    monkeypatch.setattr("gh.run_gh",
+    monkeypatch.setattr("src.gh.run_gh",
                         lambda args, **kw: [{"number": 77, "title": "Google sign-in",
                                              "draft": False}])
     resp = client.get("/repos/sample-org/sample-app")
@@ -100,7 +100,7 @@ def test_api_config_and_toggle(tmp_path, monkeypatch):
     def fake_gh(args, **kw):
         return [{"name": "sample-app"}, {"name": "admin-web"}]
 
-    monkeypatch.setattr("gh.run_gh", fake_gh)
+    monkeypatch.setattr("src.gh.run_gh", fake_gh)
 
     client = TestClient(app)
 
@@ -156,7 +156,7 @@ def test_config_page_has_config_block(tmp_path, monkeypatch):
     cfg_path.write_text("org: sample-org\nrepos:\n  sample-app: auto\n")
     monkeypatch.setenv("AUTOREVIEW_CONFIG", str(cfg_path))
     monkeypatch.setenv("DSH_SESSION_ROOT", str(tmp_path / "sessions"))
-    monkeypatch.setattr("gh.run_gh", lambda args, **kw: [{"name": "sample-app"}])
+    monkeypatch.setattr("src.gh.run_gh", lambda args, **kw: [{"name": "sample-app"}])
     client = TestClient(app)
     r = client.get("/config")
     assert r.status_code == 200
@@ -169,7 +169,7 @@ def test_repo_list_page_has_no_config_block(tmp_path, monkeypatch):
     cfg_path.write_text("org: sample-org\nrepos:\n  sample-app: auto\n")
     monkeypatch.setenv("AUTOREVIEW_CONFIG", str(cfg_path))
     monkeypatch.setenv("DSH_SESSION_ROOT", str(tmp_path / "sessions"))
-    monkeypatch.setattr("gh.run_gh", lambda args, **kw: [{"name": "sample-app"}])
+    monkeypatch.setattr("src.gh.run_gh", lambda args, **kw: [{"name": "sample-app"}])
     client = TestClient(app)
     r = client.get("/")
     assert r.status_code == 200
@@ -184,7 +184,7 @@ def test_repo_page_shows_open_prs(client, tmp_path, monkeypatch):
             {"number": 77, "title": "Google sign-in", "draft": False},
         ]
 
-    monkeypatch.setattr("gh.run_gh", fake_gh)
+    monkeypatch.setattr("src.gh.run_gh", fake_gh)
     resp = client.get("/repos/sample-org/sample-app")
     assert resp.status_code == 200
     assert "chore: update deps" in resp.text
@@ -196,7 +196,7 @@ def test_repo_page_gh_failure_badge(client, tmp_path, monkeypatch):
     def fake_gh(args, **kw):
         raise RuntimeError("rate limited")
 
-    monkeypatch.setattr("gh.run_gh", fake_gh)
+    monkeypatch.setattr("src.gh.run_gh", fake_gh)
     resp = client.get("/repos/sample-org/sample-app")
     assert resp.status_code == 200
     assert "open PRs unavailable" in resp.text
@@ -340,7 +340,7 @@ def test_review_log_api_missing(tmp_path, monkeypatch):
 
 
 def test_repo_page_has_review_buttons(client, monkeypatch):
-    monkeypatch.setattr("gh.run_gh",
+    monkeypatch.setattr("src.gh.run_gh",
                         lambda args, **kw: [
                             {"number": 78, "title": "chore: update deps",
                              "draft": False}])
@@ -363,7 +363,7 @@ def test_repo_list_shows_auto_repos_without_data(tmp_path, monkeypatch):
 
 
 def test_pr_page_not_reviewed_placeholder(client, monkeypatch):
-    monkeypatch.setattr("gh.run_gh",
+    monkeypatch.setattr("src.gh.run_gh",
                         lambda args, **kw: {"number": 78,
                                             "title": "chore: update deps",
                                             "user": {"login": "bot"},
@@ -374,3 +374,61 @@ def test_pr_page_not_reviewed_placeholder(client, monkeypatch):
     assert "Not reviewed yet" in resp.text
     assert "Review now" in resp.text
     assert "chore: update deps" in resp.text
+
+
+def test_repo_page_no_session_shows_open_prs(tmp_path, monkeypatch):
+    monkeypatch.setenv("DSH_SESSION_ROOT", str(tmp_path / "sessions"))
+    monkeypatch.setattr("src.gh.run_gh",
+                        lambda args, **kw: [{"number": 78,
+                                             "title": "chore: update deps",
+                                             "draft": False}] if "pulls" in args[1]
+                        else {"full_name": "sample-org/sample-app"})
+    client = TestClient(app)
+    resp = client.get("/repos/sample-org/sample-app")
+    assert resp.status_code == 200
+    assert "No reviews yet" in resp.text
+    assert "chore: update deps" in resp.text
+    assert "Review now" in resp.text
+
+
+def test_repo_page_gh_404(tmp_path, monkeypatch):
+    monkeypatch.setenv("DSH_SESSION_ROOT", str(tmp_path / "sessions"))
+
+    def fake_gh(args, **kw):
+        raise RuntimeError("not found")
+
+    monkeypatch.setattr("src.gh.run_gh", fake_gh)
+    client = TestClient(app)
+    assert client.get("/repos/sample-org/nope").status_code == 404
+
+
+def test_repo_list_auto_card_links_dashboard(tmp_path, monkeypatch):
+    cfg_path = tmp_path / "autoreview.yml"
+    cfg_path.write_text("org: sample-org\nrepos:\n  sample-app: auto\n")
+    monkeypatch.setenv("AUTOREVIEW_CONFIG", str(cfg_path))
+    monkeypatch.setenv("DSH_SESSION_ROOT", str(tmp_path / "sessions"))
+    client = TestClient(app)
+    r = client.get("/")
+    assert r.status_code == 200
+    assert 'href="/repos/sample-org/sample-app"' in r.text
+
+
+def test_pr_page_reviewing_state(tmp_path, monkeypatch):
+    import os as _os
+
+    monkeypatch.setenv("DSH_SESSION_ROOT", str(tmp_path / "sessions"))
+    session_dir = tmp_path / "sessions" / "sample-org" / "sample-app" / "pr-78"
+    session_dir.mkdir(parents=True)
+    (session_dir / "snapshot.json").write_text(json.dumps({"pr": 78}))
+    (session_dir / "review.lock").write_text(
+        json.dumps({"pid": _os.getpid(), "started_at": "2026-08-16T10:00:00"}))
+    monkeypatch.setattr("src.gh.run_gh",
+                        lambda args, **kw: {"number": 78, "title": "T",
+                                            "user": {"login": "a"},
+                                            "base": {"ref": "main"},
+                                            "head": {"ref": "x"}})
+    client = TestClient(app)
+    resp = client.get("/repos/sample-org/sample-app/pr/78")
+    assert resp.status_code == 200
+    assert "Reviewing…" in resp.text
+    assert "Not reviewed yet" not in resp.text

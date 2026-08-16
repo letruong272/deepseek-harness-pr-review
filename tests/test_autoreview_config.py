@@ -1,7 +1,7 @@
 # tests/test_autoreview_config.py
 import pytest
 
-from autoreview_config import (auto_repos, list_repos, load_config,
+from src.autoreview_config import (auto_repos, list_repos, load_config,
                                remove_repo, set_repo_mode)
 
 NEW_YML = """

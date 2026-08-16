@@ -8,6 +8,13 @@
   <a class="gh-link" target="_blank" rel="noopener"
      href="https://github.com/{{ repo_owner }}/{{ repo_name }}/pull/{{ pr_info.pr }}">Open on GitHub ↗</a></h1>
 <p class="muted">{{ pr_info.author }} · {{ pr_info.base }} → {{ pr_info.head }}</p>
+{% if reviewing %}
+<div class="config-block">
+  <h2>Reviewing… <span class="muted">(PID {{ review_pid }})</span></h2>
+  <p class="muted">A review session is running for this PR. The log below
+  updates live; the page reloads automatically when the review finishes.</p>
+</div>
+{% else %}
 <div class="config-block">
   <h2>Not reviewed yet</h2>
   <p class="muted">This PR has no review session yet. Run a review to get
@@ -16,6 +23,7 @@
           onclick="triggerReview({{ pr_info.pr }}, this)">Review now</button>
   <div id="review-msg" class="review-msg"></div>
 </div>
+{% endif %}
 <div class="config-block review-log-panel" id="log-panel" style="display:none">
   <h2>Review log</h2>
   <pre id="review-log" class="review-log">loading…</pre>

@@ -9,10 +9,10 @@ from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
-from autoreview_config import load_config as load_autoreview_config
-from autoreview_config import auto_repos, list_repos, remove_repo, set_repo_mode
-from config import load_config
-from run import main as run_main
+from src.autoreview_config import load_config as load_autoreview_config
+from src.autoreview_config import auto_repos, list_repos, remove_repo, set_repo_mode
+from src.config import load_config
+from src.run import main as run_main
 from web import metrics
 
 BASE = Path(__file__).resolve().parent
@@ -85,12 +85,24 @@ def config_page(request: Request):
 
 @app.get("/repos/{owner}/{repo}", response_class=HTMLResponse)
 def repo_page(request: Request, owner: str, repo: str):
+    from src.gh import run_gh
+
     rec = metrics.repo_record(_session_root(), owner, repo)
     if rec is None:
-        raise HTTPException(status_code=404, detail="Repo not found in sessions")
+        # Chưa có session — repo vẫn render nếu tồn tại trên GitHub (PR open)
+        try:
+            run_gh(["api", f"repos/{owner}/{repo}"])
+        except (RuntimeError, OSError):
+            raise HTTPException(status_code=404,
+                                detail="Repo not found")
+        rec = {"owner": owner, "repo": repo, "prs_total": 0, "bugs_total": 0,
+               "doc_errors_total": 0, "verdict_count":
+                   {"ACCURATE": 0, "PARTIAL": 0, "MISLEADING": 0,
+                    "NO_CLAIMS": 0}, "prs": [], "has_data": False}
+    else:
+        rec["has_data"] = True
     verdict_json = json.dumps(rec["verdict_count"])
     open_qs = sum(p["open_questions"] for p in rec["prs"])
-    from gh import run_gh
 
     pr_rows = metrics.open_prs(_session_root(), owner, repo, gh=run_gh)
     return templates.TemplateResponse(
@@ -103,8 +115,28 @@ def repo_page(request: Request, owner: str, repo: str):
 def pr_page(request: Request, owner: str, repo: str, pr: int):
     detail = metrics.pr_detail(_session_root(), owner, repo, pr)
     if detail is None:
+        session_dir = _session_root() / owner / repo / f"pr-{pr}"
+        reviewing = metrics.review_process_info(session_dir)
+        if session_dir.exists() and reviewing:
+            # session đang review dở (snapshot/claims có, findings chưa)
+            from src.gh import run_gh
+
+            try:
+                meta = run_gh(["api", f"repos/{owner}/{repo}/pulls/{pr}"])
+                pr_info = {"pr": pr, "title": meta.get("title", ""),
+                           "author": (meta.get("user") or {}).get("login", ""),
+                           "base": (meta.get("base") or {}).get("ref", ""),
+                           "head": (meta.get("head") or {}).get("ref", "")}
+            except (RuntimeError, OSError):
+                pr_info = {"pr": pr, "title": "", "author": "",
+                           "base": "", "head": ""}
+            return templates.TemplateResponse(
+                request, "pr.html",
+                {"detail": None, "pr_info": pr_info, "not_reviewed": True,
+                 "reviewing": True, "review_pid": reviewing["pid"],
+                 "repo_owner": owner, "repo_name": repo})
         # PR chưa review → hiện placeholder + nút Review now (title từ gh)
-        from gh import run_gh
+        from src.gh import run_gh
 
         try:
             meta = run_gh(["api", f"repos/{owner}/{repo}/pulls/{pr}"])
@@ -118,11 +150,11 @@ def pr_page(request: Request, owner: str, repo: str, pr: int):
         return templates.TemplateResponse(
             request, "pr.html",
             {"detail": None, "pr_info": pr_info, "not_reviewed": True,
-             "repo_owner": owner, "repo_name": repo})
+             "reviewing": False, "repo_owner": owner, "repo_name": repo})
     return templates.TemplateResponse(
         request, "pr.html",
         {"detail": detail, "pr_info": None, "not_reviewed": False,
-         "repo_owner": owner, "repo_name": repo})
+         "reviewing": False, "repo_owner": owner, "repo_name": repo})
 
 
 @app.get("/api/config")

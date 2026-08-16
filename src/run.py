@@ -9,11 +9,11 @@ import json
 import sys
 from pathlib import Path
 
-from config import load_config
-from gh import gh_available, run_gh
-from human_gate import run_gate
-from synthesize import build_comment, build_report, post_comment
-from verify import run_verify, setup_workspace
+from src.config import load_config
+from src.gh import gh_available, run_gh
+from src.human_gate import run_gate
+from src.synthesize import build_comment, build_report, post_comment
+from src.verify import run_verify, setup_workspace
 
 
 def _doctor() -> int:
@@ -54,7 +54,7 @@ def _doctor() -> int:
         print("✗ deepseek-harness-sdk not installed — run `pip install -e '.[dev]'`")
         ok = False
 
-    from autoreview_config import load_config as load_autoreview_config
+    from src.autoreview_config import load_config as load_autoreview_config
 
     config_path = Path("autoreview.yml")
     if config_path.exists():
@@ -101,6 +101,42 @@ def _bump_rounds(session_dir: Path) -> None:
     path.write_text(str(current + 1))
 
 
+def _version() -> int:
+    """Print the installed version."""
+    try:
+        ver = importlib.metadata.version("deepseek-harness-pr-review")
+    except importlib.metadata.PackageNotFoundError:
+        ver = "dev (not installed via pip)"
+    print(ver)
+    return 0
+
+
+def _update() -> int:
+    """Self-update from GitHub: pip install -U git+URL."""
+    import subprocess
+
+    try:
+        old = importlib.metadata.version("deepseek-harness-pr-review")
+    except importlib.metadata.PackageNotFoundError:
+        old = "dev (not installed via pip)"
+    print(f"Current version: {old}")
+    print("Updating from GitHub...")
+    proc = subprocess.run(
+        [sys.executable, "-m", "pip", "install", "-U",
+         "git+https://github.com/nexpeakcore/deepseek-harness-pr-review.git"],
+        capture_output=True, text=True)
+    if proc.returncode != 0:
+        print(f"Update failed:\n{proc.stderr[-2000:]}", file=sys.stderr)
+        return 1
+    try:
+        new = importlib.metadata.version("deepseek-harness-pr-review")
+    except importlib.metadata.PackageNotFoundError:
+        new = "?"
+    print(f"Updated: {old} → {new}")
+    print("Note: restart a running web dashboard to pick up the new code.")
+    return 0
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(prog="harness-pr-review")
     parser.add_argument("pr", nargs="?", help="<owner>/<repo> <pr-number> or owner/repo#n")
@@ -117,23 +153,38 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--fixtures", type=Path, default=None,
                         help="directory containing snapshot.json/claims.json/findings.json "
                              "(for e2e, skips gh & model)")
+    parser.add_argument("--version", action="store_true",
+                        help="print the installed version")
     parser.add_argument("doctor", nargs="?", help="check readiness (Python, gh, API key, SDK)")
+    parser.add_argument("update", nargs="?", help="self-update from GitHub")
     args = parser.parse_args(argv)
 
+    if args.version:
+        return _version()
     if args.doctor == "doctor" or args.pr == "doctor":
         return _doctor()
+    if args.update == "update" or args.pr == "update":
+        return _update()
     if args.pr is None:
         parser.print_help()
         return 2
 
-    base = args.pr.split("#")[0]
-    parts = base.split("/")
-    if len(parts) != 2 or (args.number is None and "#" not in args.pr):
-        print("usage: python -m src.run <owner>/<repo> <pr-number>",
-              file=sys.stderr)
+    from src.repo_ref import parse_pr, parse_repo
+
+    try:
+        if "#" in args.pr or "/pull/" in args.pr:
+            owner, repo, pr_num = parse_pr(args.pr)
+        elif args.number is not None:
+            owner, repo = parse_repo(args.pr)
+            pr_num = args.number
+        else:
+            owner, repo, pr_num = parse_pr(args.pr)
+        num = str(pr_num)
+    except ValueError as e:
+        print(f"usage: harness-pr-review <owner>/<repo> <pr-number> "
+              f"(or GitHub URL / owner/repo#n)", file=sys.stderr)
+        print(f"error: {e}", file=sys.stderr)
         return 2
-    owner, repo = parts
-    num = str(args.number if args.number is not None else args.pr.split("#")[1])
     if not num.isdigit():
         print(f"invalid PR number: {num}", file=sys.stderr)
         return 2
@@ -159,8 +210,8 @@ def main(argv: list[str] | None = None) -> int:
                 (session_dir / name).write_text(src.read_text())
             findings = json.loads((session_dir / "findings.json").read_text())
         else:
-            from snapshot import build_snapshot
-            from claims import extract_claims
+            from src.snapshot import build_snapshot
+            from src.claims import extract_claims
 
             snapshot = _load_or_skip("snapshot.json", session_dir, args.force)
             if snapshot is None:

@@ -3,7 +3,7 @@ import json
 import sys
 from pathlib import Path
 
-from gh import run_gh as _default_gh
+from src.gh import run_gh as _default_gh
 
 
 def _get_threads(owner: str, repo: str, n: int, gh) -> list[dict]:

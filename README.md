@@ -39,7 +39,7 @@ status. Live demo data is included — see [Web dashboard](#web-dashboard).
 | ✅ **Requirement impact** | `CHANGED / BROKEN / RISK` analysis per business requirement |
 | ✅ **Human-in-the-loop** | ≤20-word confirmation questions only when uncertain — no guessing |
 | ✅ **Auto review poller** | Reviews new PRs automatically, re-reviews when the head commit changes |
-| ✅ **Web dashboard** | Read-only metrics: bugs, doc errors, verdicts, review rounds per repo |
+| ✅ **Web dashboard** | Repo config management, review triggers (Review now), live review logs, metrics: bugs, doc errors, verdicts, review rounds per repo |
 | ✅ **Idempotent PR comments** | One English comment per PR, updated in place — never duplicated |
 | ✅ **Traceable** | Every phase writes structured JSON to `sessions/` |
 
@@ -47,12 +47,59 @@ status. Live demo data is included — see [Web dashboard](#web-dashboard).
 
 Requirements: Python 3.10+ (recommended 3.11), `gh` CLI already authenticated.
 
+**Quick install (from GitHub, no clone needed):**
+
+```bash
+pip install git+https://github.com/nexpeakcore/deepseek-harness-pr-review.git
+```
+
+**Or clone for development:**
+
 ```bash
 python -m venv .venv && . .venv/bin/activate
 pip install -e '.[dev]'   # zsh needs quotes; SDK comes from PyPI (deepseek-harness-sdk)
+```
+
+Then authenticate:
+
+```bash
 gh auth login          # required
 export DEEPSEEK_API_KEY=sk-...   # see .env.example
+harness-pr-review doctor         # verify everything is ready
 ```
+
+## Updating
+
+**Easiest — built-in self-update:**
+
+```bash
+harness-pr-review update     # installs the latest version from GitHub
+harness-pr-review --version  # show the installed version
+```
+
+**Or manually:**
+
+Installed via pip (no clone):
+
+```bash
+pip install -U git+https://github.com/nexpeakcore/deepseek-harness-pr-review.git
+```
+
+Cloned for development:
+
+```bash
+git pull origin main   # pull the latest code
+pip install -e .       # refresh entry points if pyproject.toml changed
+```
+
+**After updating:**
+
+- The auto-review poller (launchd/cron) picks up the new code on its next
+  pass — no restart needed.
+- A running web dashboard keeps the old code until restarted: stop the
+  process, then start it again (`python -m web.server`).
+- Your existing `sessions/` data and `autoreview.yml` are preserved — updates
+  never touch them.
 
 ## Usage
 
@@ -63,8 +110,10 @@ harness-pr-review doctor                # check readiness: Python, gh, API key, 
 harness-pr-review owner/repo 123        # review one PR (interactive)
 harness-pr-review owner/repo 123 --skip-human   # batch, no questions
 harness-pr-review owner/repo 123 --no-post      # don't post a comment
+harness-pr-review https://github.com/owner/repo/pull/123  # paste a GitHub PR link
 autoreview --once                       # auto review: single pass
 autoreview --daemon                     # auto review: every interval_minutes
+autoreview --add-repo https://github.com/owner/repo --mode auto  # add by link
 ```
 
 (Or run from source: `PYTHONPATH=src python -m src.run owner/repo 123`)

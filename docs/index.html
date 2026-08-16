@@ -79,13 +79,15 @@ for every claim.</p>
 </div>
 
 <h2>Quickstart</h2>
-<pre><code>pip install -e '.[web]'
+<pre><code>pip install git+https://github.com/nexpeakcore/deepseek-harness-pr-review.git
 gh auth login
 export DEEPSEEK_API_KEY=sk-...
 
-python -m src.run owner/repo 123   # review one PR
-python -m src.autoreview --daemon  # auto review every 2 min
-python -m web.server               # dashboard at http://127.0.0.1:6789</code></pre>
+harness-pr-review doctor                                  # check readiness
+harness-pr-review https://github.com/owner/repo/pull/123  # review one PR
+harness-pr-review owner/repo 123                          # or owner/repo + number
+autoreview --daemon                                       # auto review every 2 min
+python -m web.server                                      # dashboard at :6789</code></pre>
 
 <hr>
 

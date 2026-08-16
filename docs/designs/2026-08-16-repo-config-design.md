@@ -43,7 +43,7 @@ all-auto).
 
 - Poller only reviews repos whose mode is `auto`
 - New subcommands:
-  - `--add-repo <owner/repo|name> --mode auto|manual`
+  - `--add-repo <URL|owner/repo|name> --mode auto|manual` (URLs like https://github.com/owner/repo accepted)
   - `--rm-repo <owner/repo|name>`
   - `--repos` — print status table (includes unlisted org repos when `org` set)
 
