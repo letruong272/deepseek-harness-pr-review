@@ -69,9 +69,13 @@ def repo_page(request: Request, owner: str, repo: str):
         raise HTTPException(status_code=404, detail="Repo not found in sessions")
     verdict_json = json.dumps(rec["verdict_count"])
     open_qs = sum(p["open_questions"] for p in rec["prs"])
+    from gh import run_gh
+
+    pr_rows = metrics.open_prs(_session_root(), owner, repo, gh=run_gh)
     return templates.TemplateResponse(
         request, "repo.html",
-        {"repo": rec, "verdict_json": verdict_json, "open_qs": open_qs})
+        {"repo": rec, "verdict_json": verdict_json, "open_qs": open_qs,
+         "pr_rows": pr_rows})
 
 
 @app.get("/repos/{owner}/{repo}/pr/{pr}", response_class=HTMLResponse)

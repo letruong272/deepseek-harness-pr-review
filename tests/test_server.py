@@ -62,7 +62,10 @@ def test_repo_list_empty_state(tmp_path, monkeypatch):
     assert "No reviews yet" in resp.text
 
 
-def test_repo_page(client):
+def test_repo_page(client, monkeypatch):
+    monkeypatch.setattr("gh.run_gh",
+                        lambda args, **kw: [{"number": 77, "title": "Google sign-in",
+                                             "draft": False}])
     resp = client.get("/repos/sample-org/sample-app")
     assert resp.status_code == 200
     assert "Google sign-in" in resp.text
@@ -171,3 +174,28 @@ def test_repo_list_page_has_no_config_block(tmp_path, monkeypatch):
     assert r.status_code == 200
     assert "Repo configuration" not in r.text
     assert "Config" in r.text  # navbar link
+
+
+def test_repo_page_shows_open_prs(client, tmp_path, monkeypatch):
+    def fake_gh(args, **kw):
+        return [
+            {"number": 78, "title": "chore: update deps", "draft": False},
+            {"number": 77, "title": "Google sign-in", "draft": False},
+        ]
+
+    monkeypatch.setattr("gh.run_gh", fake_gh)
+    resp = client.get("/repos/sample-org/sample-app")
+    assert resp.status_code == 200
+    assert "chore: update deps" in resp.text
+    assert "Not reviewed" in resp.text
+    assert "Reviewed" in resp.text
+
+
+def test_repo_page_gh_failure_badge(client, tmp_path, monkeypatch):
+    def fake_gh(args, **kw):
+        raise RuntimeError("rate limited")
+
+    monkeypatch.setattr("gh.run_gh", fake_gh)
+    resp = client.get("/repos/sample-org/sample-app")
+    assert resp.status_code == 200
+    assert "open PRs unavailable" in resp.text

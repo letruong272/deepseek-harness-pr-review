@@ -53,3 +53,5 @@ tr.unlisted td { color: #6b7280; }
 .v-auto { background: #eaf7ee; color: #27ae60; }
 .v-manual { background: #eef1f4; color: #6b7280; }
 .v-unlisted { background: #f4f6f8; color: #a0a6ad; }
+.tag.draft { background: #6b7280; color: #fff; font-size: 10px; padding: 1px 6px;
+             border-radius: 8px; margin-left: 6px; }
