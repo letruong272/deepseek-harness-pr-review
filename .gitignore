@@ -6,3 +6,4 @@ sessions/
 .pytest_cache/
 dist/
 *.egg-info/
+.superpowers/
