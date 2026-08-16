@@ -1,8 +1,4 @@
-import json
-
-import pytest
-
-from synthesize import build_comment, build_report, post_comment
+from synthesize import _overall_verdict, build_comment, build_report, post_comment
 
 SNAPSHOT = {
     "owner": "demo", "repo": "app", "pr": 7,
@@ -64,3 +60,48 @@ def test_post_comment_posts_when_no_marker(monkeypatch):
                           gh=lambda args, **kw: {"id": 1},
                           list_comments=lambda: [{"body": "other"}])
     assert posted is True
+
+
+def test_build_report_escapes_cells(tmp_path):
+    findings = {
+        "claims": [{"id": "C1", "status": "PASS", "evidence": ["a.py:1|2"],
+                    "note": "note\nvới | pipe"}],
+        "docs": [{"path": "docs/a.md", "status": "WRONG", "what": "khác|biệt\nnewline"}],
+        "impact": [{"requirement": "REQ-1|a", "impact": "CHANGED", "detail": "chi\ntiết"}],
+        "threads": [{"text": "comment\nvới | pipe", "status": "STILL_VALID", "note": "ghi\nchú|1"}],
+        "unresolved_questions": [],
+    }
+    report = build_report(SNAPSHOT, CLAIMS, findings, [], tmp_path)
+    assert "\\|" in report
+    assert "<br>" in report
+    assert "Nội dung" in report
+    assert "Adds checkout" in report
+    comment = build_comment(SNAPSHOT, CLAIMS, findings, [])
+    assert "comment với | pipe" in comment
+
+
+def test_no_claims_verdict(tmp_path):
+    findings = {"claims": [], "docs": [], "impact": [], "threads": [],
+                "unresolved_questions": []}
+    report = build_report(SNAPSHOT, [], findings, [], tmp_path)
+    assert "NO CLAIMS" in report
+    comment = build_comment(SNAPSHOT, [], findings, [])
+    assert "NO CLAIMS" in comment
+
+
+def test_verdict_precedence():
+    assert _overall_verdict({"claims": [{"status": "PASS"}, {"status": "FAIL"}]}) == "MISLEADING"
+    assert _overall_verdict({"claims": [{"status": "PASS"}, {"status": "UNVERIFIED"}]}) == "PARTIAL"
+
+
+def test_post_comment_default_lists_paginated_and_posts_dash_f():
+    seen = []
+
+    def fake_gh(args, **kw):
+        seen.append(args)
+        return []
+
+    post_comment("demo", "app", 7, "body", gh=fake_gh)
+    assert "--paginate" in seen[0]
+    assert "-f" in seen[1]
+    assert "-F" not in seen[1]

@@ -1,5 +1,4 @@
 """Phase 5: tổng hợp report tiếng Việt + post comment tiếng Anh lên PR."""
-import json
 from pathlib import Path
 
 from gh import run_gh
@@ -7,6 +6,20 @@ from gh import run_gh
 MARKER = "<!-- harness-pr-review -->"
 STATUS_VN = {"PASS": "ĐÚNG", "FAIL": "SAI", "PARTIAL": "ĐÚNG MỘT PHẦN",
              "UNVERIFIED": "CHƯA XÁC MINH"}
+
+
+def _cell(text, max_len=200):
+    text = str(text or "")
+    if len(text) > max_len:
+        text = text[:max_len] + "…"
+    return text.replace("|", "\\|").replace("\n", "<br>")
+
+
+def _bullet(text, max_len=100):
+    text = str(text or "")
+    if len(text) > max_len:
+        text = text[:max_len] + "…"
+    return text.replace("\n", " ")
 
 
 def _overall_verdict(findings: dict) -> str:
@@ -24,6 +37,7 @@ def build_report(snapshot: dict, claims: list[dict], findings: dict,
                  answers: list[dict], session_dir: Path) -> str:
     """Viết report.md tiếng Việt. Trả về nội dung report."""
     verdict = _overall_verdict(findings)
+    text_by_id = {cl["id"]: cl.get("text", "") for cl in claims}
     lines = [
         f"# Review PR #{snapshot['pr']} — {snapshot['title']}",
         "",
@@ -33,31 +47,32 @@ def build_report(snapshot: dict, claims: list[dict], findings: dict,
         "",
         "## Claims",
         "",
-        "| Claim | Trạng thái | Bằng chứng | Ghi chú |",
-        "|---|---|---|---|",
+        "| Claim | Nội dung | Trạng thái | Bằng chứng | Ghi chú |",
+        "|---|---|---|---|---|",
     ]
     for c in findings.get("claims", []):
+        text = text_by_id.get(c["id"], c.get("text", ""))
         lines.append(
-            f"| {c['id']} | {STATUS_VN.get(c['status'], c['status'])} | "
-            f"{', '.join(c.get('evidence', [])) or '-'} | {c.get('note', '')} |")
+            f"| {c['id']} | {_cell(text)} | {STATUS_VN.get(c['status'], c['status'])} | "
+            f"{_cell(', '.join(c.get('evidence', [])) or '-')} | {_cell(c.get('note', ''))} |")
     lines += [
         "", "## Docs (so với thực tế)", "",
         "| Doc | Trạng thái | Khác biệt |", "|---|---|---|",
     ]
     for d in findings.get("docs", []):
-        lines.append(f"| {d['path']} | {d['status']} | {d.get('what', '')} |")
+        lines.append(f"| {_cell(d['path'])} | {d['status']} | {_cell(d.get('what', ''))} |")
     lines += [
         "", "## Tác động tới requirement", "",
         "| Requirement | Impact | Chi tiết |", "|---|---|---|",
     ]
     for i in findings.get("impact", []):
-        lines.append(f"| {i['requirement']} | {i['impact']} | {i.get('detail', '')} |")
+        lines.append(f"| {_cell(i['requirement'])} | {i['impact']} | {_cell(i.get('detail', ''))} |")
     lines += [
         "", "## Review threads", "",
         "| Comment | Trạng thái | Ghi chú |", "|---|---|---|",
     ]
     for t in findings.get("threads", []):
-        lines.append(f"| {t['text'][:120]} | {t['status']} | {t.get('note', '')} |")
+        lines.append(f"| {_cell(t['text'], max_len=120)} | {t['status']} | {_cell(t.get('note', ''))} |")
     lines += ["", "## Confirm log", ""]
     for a in answers:
         lines.append(f"- **{a['question']}** → {a['answer']}")
@@ -79,7 +94,7 @@ def build_comment(snapshot: dict, claims: list[dict], findings: dict,
     doc_lines = "\n".join(
         f"- {d['path']}: {d['status']}" for d in findings.get("docs", []))
     thread_lines = "\n".join(
-        f"- {t['text'][:100]} → {t['status']}" for t in findings.get("threads", []))
+        f"- {_bullet(t['text'])} → {t['status']}" for t in findings.get("threads", []))
     return (
         f"## Harness PR Review\n\n"
         f"**Verdict: description is {verdict}**\n\n"
@@ -98,10 +113,10 @@ def post_comment(owner: str, repo: str, n: int, body: str, *,
                  gh=run_gh, list_comments=None) -> bool:
     """Post comment nếu chưa có marker. Trả về True nếu đã post."""
     if list_comments is None:
-        list_comments = lambda: gh([f"api", f"repos/{owner}/{repo}/issues/{n}/comments"])
+        list_comments = lambda: gh(["api", f"repos/{owner}/{repo}/issues/{n}/comments", "--paginate"])
     for c in list_comments():
         if MARKER in c.get("body", ""):
             return False
-    gh([f"api", f"repos/{owner}/{repo}/issues/{n}/comments",
-        "-F", f"body={body}"])
+    gh(["api", f"repos/{owner}/{repo}/issues/{n}/comments",
+        "-f", f"body={body}"])
     return True
