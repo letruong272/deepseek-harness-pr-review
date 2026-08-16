@@ -143,6 +143,7 @@ def _update() -> int:
     print("Updating from GitHub...")
     proc = subprocess.run(
         [sys.executable, "-m", "pip", "install", "-U",
+         "deepseek-harness-pr-review[web] @ "
          "git+https://github.com/nexpeakcore/deepseek-harness-pr-review.git"],
         capture_output=True, text=True)
     if proc.returncode != 0:
