@@ -215,8 +215,20 @@ def build_comment(snapshot: dict, claims: list[dict], findings: dict,
         _comment_section("Confirm log", "✅", confirm_table,
                          count=len(answers)),
     ]
+
+    bugs = sum(1 for c in findings.get("claims", [])
+               if c.get("status") in ("FAIL", "PARTIAL"))
+    bugs += sum(1 for i in findings.get("impact", [])
+                if i.get("impact") in ("BROKEN", "RISK"))
+    doc_errors = sum(1 for d in findings.get("docs", [])
+                     if d.get("status") in ("WRONG", "FABRICATED", "STALE"))
+    summary = (
+        f"{_badge(v_text, v_color)} "
+        f"{_badge(f'Bugs: {bugs}', '#c0392b' if bugs else '#6b7280')} "
+        f"{_badge(f'Doc errors: {doc_errors}', '#b9770e' if doc_errors else '#6b7280')}"
+    )
     return (
-        f"## Harness PR Review — Verdict: {_badge(v_text, v_color)}\n\n"
+        f"## Harness PR Review — Verdict: {summary}\n\n"
         f"{chr(10).join(sections)}\n\n"
         f"Full report: local `sessions/{snapshot['owner']}/{snapshot['repo']}/"
         f"pr-{snapshot['pr']}/report.md`\n\n{MARKER}"

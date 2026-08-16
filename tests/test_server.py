@@ -411,3 +411,24 @@ def test_repo_list_auto_card_links_dashboard(tmp_path, monkeypatch):
     r = client.get("/")
     assert r.status_code == 200
     assert 'href="/repos/sample-org/sample-app"' in r.text
+
+
+def test_pr_page_reviewing_state(tmp_path, monkeypatch):
+    import os as _os
+
+    monkeypatch.setenv("DSH_SESSION_ROOT", str(tmp_path / "sessions"))
+    session_dir = tmp_path / "sessions" / "sample-org" / "sample-app" / "pr-78"
+    session_dir.mkdir(parents=True)
+    (session_dir / "snapshot.json").write_text(json.dumps({"pr": 78}))
+    (session_dir / "review.lock").write_text(
+        json.dumps({"pid": _os.getpid(), "started_at": "2026-08-16T10:00:00"}))
+    monkeypatch.setattr("src.gh.run_gh",
+                        lambda args, **kw: {"number": 78, "title": "T",
+                                            "user": {"login": "a"},
+                                            "base": {"ref": "main"},
+                                            "head": {"ref": "x"}})
+    client = TestClient(app)
+    resp = client.get("/repos/sample-org/sample-app/pr/78")
+    assert resp.status_code == 200
+    assert "Reviewing…" in resp.text
+    assert "Not reviewed yet" not in resp.text

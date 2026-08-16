@@ -134,3 +134,10 @@ def test_post_comment_default_lists_paginated_and_posts_dash_f():
     assert "--paginate" in seen[0]
     assert "-f" in seen[1]
     assert "-F" not in seen[1]
+
+
+def test_build_comment_summary_badges():
+    comment = build_comment(SNAPSHOT, CLAIMS, FINDINGS, ANSWERS)
+    assert "Bugs:" in comment
+    assert "Doc errors:" in comment
+    assert "background-color" in comment
