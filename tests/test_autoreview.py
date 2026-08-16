@@ -217,3 +217,23 @@ def test_decide_pr_complete_review_skips(tmp_path):
     os.utime(d / "snapshot.json", (1699999000, 1699999000))
     os.utime(d / "findings.json", (1700000000, 1700000000))  # mới hơn
     assert decide_pr(root, "o", "r", 5, "abc") == "SKIP"
+
+
+def test_main_add_repo_url(tmp_path, monkeypatch):
+    cfg_path = tmp_path / "autoreview.yml"
+    cfg_path.write_text("org: sample-org\nrepos:\n  sample-app: manual\n")
+    monkeypatch.setattr("autoreview.CONFIG_PATH", cfg_path)
+    code = main(["--add-repo", "https://github.com/sample-org/sample-api",
+                 "--mode", "auto"])
+    assert code == 0
+    cfg = load_config(cfg_path)
+    assert cfg["repos"]["sample-org/sample-api"] == "auto"
+
+
+def test_main_add_repo_bare_name_uses_org(tmp_path, monkeypatch):
+    cfg_path = tmp_path / "autoreview.yml"
+    cfg_path.write_text("org: sample-org\nrepos:\n  sample-app: manual\n")
+    monkeypatch.setattr("autoreview.CONFIG_PATH", cfg_path)
+    code = main(["--add-repo", "sample-app2", "--mode", "auto"])
+    assert code == 0
+    assert load_config(cfg_path)["repos"]["sample-app2"] == "auto"

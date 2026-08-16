@@ -183,8 +183,19 @@ def main(argv: list[str] | None = None) -> int:
     args = parser.parse_args(argv)
 
     if args.add_repo:
-        set_repo_mode(args.config, args.add_repo, args.mode)
-        print(f"{args.add_repo} -> {args.mode}")
+        from repo_ref import parse_repo
+
+        raw = args.add_repo.strip()
+        try:
+            owner, repo_name = parse_repo(raw)
+            repo_ref_key = f"{owner}/{repo_name}"
+        except ValueError:
+            if "/" in raw:
+                print(f"error: cannot parse repo from: {raw!r}", file=sys.stderr)
+                return 2
+            repo_ref_key = raw  # tên trần → org từ config
+        set_repo_mode(args.config, repo_ref_key, args.mode)
+        print(f"{repo_ref_key} -> {args.mode}")
         return 0
     if args.rm_repo:
         remove_repo(args.config, args.rm_repo)

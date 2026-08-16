@@ -126,14 +126,22 @@ def main(argv: list[str] | None = None) -> int:
         parser.print_help()
         return 2
 
-    base = args.pr.split("#")[0]
-    parts = base.split("/")
-    if len(parts) != 2 or (args.number is None and "#" not in args.pr):
-        print("usage: python -m src.run <owner>/<repo> <pr-number>",
-              file=sys.stderr)
+    from repo_ref import parse_pr, parse_repo
+
+    try:
+        if "#" in args.pr or "/pull/" in args.pr:
+            owner, repo, pr_num = parse_pr(args.pr)
+        elif args.number is not None:
+            owner, repo = parse_repo(args.pr)
+            pr_num = args.number
+        else:
+            owner, repo, pr_num = parse_pr(args.pr)
+        num = str(pr_num)
+    except ValueError as e:
+        print(f"usage: harness-pr-review <owner>/<repo> <pr-number> "
+              f"(or GitHub URL / owner/repo#n)", file=sys.stderr)
+        print(f"error: {e}", file=sys.stderr)
         return 2
-    owner, repo = parts
-    num = str(args.number if args.number is not None else args.pr.split("#")[1])
     if not num.isdigit():
         print(f"invalid PR number: {num}", file=sys.stderr)
         return 2

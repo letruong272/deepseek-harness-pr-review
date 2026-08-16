@@ -63,8 +63,10 @@ harness-pr-review doctor                # check readiness: Python, gh, API key, 
 harness-pr-review owner/repo 123        # review one PR (interactive)
 harness-pr-review owner/repo 123 --skip-human   # batch, no questions
 harness-pr-review owner/repo 123 --no-post      # don't post a comment
+harness-pr-review https://github.com/owner/repo/pull/123  # paste a GitHub PR link
 autoreview --once                       # auto review: single pass
 autoreview --daemon                     # auto review: every interval_minutes
+autoreview --add-repo https://github.com/owner/repo --mode auto  # add by link
 ```
 
 (Or run from source: `PYTHONPATH=src python -m src.run owner/repo 123`)
