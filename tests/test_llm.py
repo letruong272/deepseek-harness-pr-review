@@ -97,3 +97,31 @@ def test_chat_gives_up(monkeypatch):
                  base_url=f"http://127.0.0.1:{port}/v1", retries=3)
     finally:
         srv.shutdown()
+
+
+class _UnauthorizedHandler(BaseHTTPRequestHandler):
+    count = 0
+
+    def do_POST(self):
+        _UnauthorizedHandler.count += 1
+        self.send_response(401)
+        self.send_header("Content-Length", "0")
+        self.end_headers()
+
+    def log_message(self, *a):
+        pass
+
+
+def test_chat_does_not_retry_401():
+    _UnauthorizedHandler.count = 0
+    srv = HTTPServer(("127.0.0.1", 0), _UnauthorizedHandler)
+    t = threading.Thread(target=srv.serve_forever, daemon=True)
+    t.start()
+    try:
+        port = srv.server_address[1]
+        with pytest.raises(RuntimeError, match="HTTP 401"):
+            chat([{"role": "user", "content": "hi"}], model="m", api_key="bad",
+                 base_url=f"http://127.0.0.1:{port}/v1", retries=3)
+        assert _UnauthorizedHandler.count == 1
+    finally:
+        srv.shutdown()
