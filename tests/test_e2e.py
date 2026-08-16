@@ -1,4 +1,4 @@
-"""E2E chạy pipeline đầy đủ qua --fixtures (không gọi gh/model)."""
+"""E2E runs the full pipeline via --fixtures (no gh/model calls)."""
 import json
 import subprocess
 import sys
@@ -24,11 +24,11 @@ FIXTURES = {
         "claims": [{"id": "C1", "status": "PASS",
                     "evidence": ["src/checkout.py:1"], "note": ""}],
         "docs": [{"path": "docs/checkout.md", "status": "WRONG",
-                  "what": "doc nói X, code làm Y"}],
+                  "what": "doc says X, code does Y"}],
         "impact": [{"requirement": "REQ-1", "impact": "CHANGED", "detail": "d"}],
         "threads": [{"text": "check validation", "status": "STILL_VALID",
-                     "note": "chưa fix"}],
-        "unresolved_questions": ["Docs checkout sai?"],
+                     "note": "not fixed yet"}],
+        "unresolved_questions": ["Is the checkout doc wrong?"],
     },
 }
 

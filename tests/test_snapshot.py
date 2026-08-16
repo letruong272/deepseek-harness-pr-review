@@ -6,7 +6,7 @@ from snapshot import build_snapshot
 
 
 def _gh_fake(registry):
-    """Trả về run_gh thay thế dựa theo tiền tố của args."""
+    """Return a run_gh replacement based on the prefix of args."""
     def fake(args, *, json=True):
         key = next(k for k in registry if args[1].startswith(k))
         val = registry[key]

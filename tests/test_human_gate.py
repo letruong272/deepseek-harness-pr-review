@@ -11,7 +11,7 @@ def test_trim_question_limits_words():
 
 
 def test_trim_question_keeps_short():
-    q = "Doc sai, phải không?"
+    q = "Is the doc wrong?"
     assert trim_question(q) == q
 
 
@@ -19,12 +19,12 @@ def test_run_gate_writes_answers(tmp_path, monkeypatch):
     findings = {
         "claims": [{"id": "C1", "status": "UNVERIFIED", "evidence": [], "note": ""}],
         "docs": [{"path": "docs/a.md", "status": "WRONG",
-                  "what": "doc nói X, code làm Y"}],
+                  "what": "doc says X, code does Y"}],
         "impact": [], "threads": [],
-        "unresolved_questions": ["Doc A đúng, phải không?"],
+        "unresolved_questions": ["Is doc A correct, right?"],
     }
     monkeypatch.setattr("builtins.input",
-                        lambda prompt: "y" if "phải không" in prompt else "n")
+                        lambda prompt: "y" if ("wrong" in prompt or "correct" in prompt) else "n")
     session_dir = tmp_path / "s"
     answers = run_gate(findings, session_dir)
     assert len(answers) == 3

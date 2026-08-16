@@ -18,22 +18,22 @@ CLAIMS = [
 
 FINDINGS = {
     "claims": [{"id": "C1", "status": "PASS", "evidence": ["src/checkout.py:1"], "note": ""}],
-    "docs": [{"path": "docs/payment.md", "status": "WRONG", "what": "doc nói retry 3, code retry 5"}],
-    "impact": [{"requirement": "REQ-1 checkout", "impact": "CHANGED", "detail": "luồng mới"}],
-    "threads": [{"text": "Missing validation", "status": "STILL_VALID", "note": "chưa fix"}],
+    "docs": [{"path": "docs/payment.md", "status": "WRONG", "what": "doc says retry 3, code retries 5"}],
+    "impact": [{"requirement": "REQ-1 checkout", "impact": "CHANGED", "detail": "new flow"}],
+    "threads": [{"text": "Missing validation", "status": "STILL_VALID", "note": "not fixed yet"}],
     "unresolved_questions": [],
 }
 
-ANSWERS = [{"question": "Doc payment sai?", "kind": "doc", "answer": "y"}]
+ANSWERS = [{"question": "Is the payment doc wrong?", "kind": "doc", "answer": "y"}]
 
 
 def test_build_report_vn(tmp_path):
     report = build_report(SNAPSHOT, CLAIMS, FINDINGS, ANSWERS, tmp_path)
     assert "## Verdict" in report
-    assert "ĐÚNG" in report
+    assert "Matches" in report
     assert "WRONG" in report
     assert "REQ-1" in report
-    assert "chưa fix" in report
+    assert "not fixed yet" in report
     assert (tmp_path / "report.md").exists()
 
 
@@ -53,7 +53,7 @@ def test_build_comment_embeds_full_report(tmp_path):
     assert "<summary>Full report" in comment
     assert "## Verdict" in comment
     assert "REQ-1" in comment
-    assert "ĐÚNG" in comment
+    assert "Matches" in comment
 
 
 def test_post_comment_updates_via_gh(monkeypatch):
@@ -83,19 +83,19 @@ def test_post_comment_posts_when_no_marker(monkeypatch):
 def test_build_report_escapes_cells(tmp_path):
     findings = {
         "claims": [{"id": "C1", "status": "PASS", "evidence": ["a.py:1|2"],
-                    "note": "note\nvới | pipe"}],
-        "docs": [{"path": "docs/a.md", "status": "WRONG", "what": "khác|biệt\nnewline"}],
-        "impact": [{"requirement": "REQ-1|a", "impact": "CHANGED", "detail": "chi\ntiết"}],
-        "threads": [{"text": "comment\nvới | pipe", "status": "STILL_VALID", "note": "ghi\nchú|1"}],
+                    "note": "note\nwith | pipe"}],
+        "docs": [{"path": "docs/a.md", "status": "WRONG", "what": "diff|erence\nnewline"}],
+        "impact": [{"requirement": "REQ-1|a", "impact": "CHANGED", "detail": "de\ntail"}],
+        "threads": [{"text": "comment\nwith | pipe", "status": "STILL_VALID", "note": "no\ntes|1"}],
         "unresolved_questions": [],
     }
     report = build_report(SNAPSHOT, CLAIMS, findings, [], tmp_path)
     assert "\\|" in report
     assert "<br>" in report
-    assert "Nội dung" in report
+    assert "Content" in report
     assert "Adds checkout" in report
     comment = build_comment(SNAPSHOT, CLAIMS, findings, [])
-    assert "comment với | pipe" in comment
+    assert "comment with | pipe" in comment
 
 
 def test_no_claims_verdict(tmp_path):

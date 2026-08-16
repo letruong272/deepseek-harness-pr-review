@@ -1,4 +1,4 @@
-"""Wrapper mỏng quanh gh CLI. Gh phải được auth sẵn (gh auth login)."""
+"""Thin wrapper around the gh CLI. gh must already be authenticated (gh auth login)."""
 import json as _json
 import subprocess
 

@@ -1,4 +1,4 @@
-"""Phase 2: tách PR description thành các claim kiểm chứng được (LLM)."""
+"""Phase 2: split the PR description into verifiable claims (LLM)."""
 import json
 import re
 from pathlib import Path
@@ -6,11 +6,11 @@ from pathlib import Path
 from llm import chat as _default_chat
 
 SCHEMA_HINT = """
-Tách mô tả PR dưới đây thành các claim kiểm chứng được (mỗi claim phải có thể
-xác minh bằng cách đọc code). Trả về JSON array đúng schema:
-[{"id": "C1", "text": "<ngắn gọn>", "category": "feature|bugfix|refactor|perf|ux|docs",
-  "files": ["<file liên quan, rỗng nếu không rõ>"], "docs": ["<docs bị claim này nhắc tới>"]}]
-Không thêm text ngoài JSON. Nếu không có claim nào, trả về [].
+Split the PR description below into verifiable claims (each claim must be
+verifiable by reading the code). Return a JSON array matching this schema:
+[{"id": "C1", "text": "<brief>", "category": "feature|bugfix|refactor|perf|ux|docs",
+  "files": ["<related files, empty if unknown>"], "docs": ["<docs this claim mentions>"]}]
+Do not add any text outside the JSON. If there are no claims, return [].
 """
 
 
@@ -24,17 +24,17 @@ def _parse_claims(raw: str) -> list[dict]:
         raise ValueError("claims response must be a list")
     for c in data:
         if not isinstance(c, dict) or "id" not in c:
-            raise ValueError(f"claim sai schema (thiếu id): {c}")
+            raise ValueError(f"claim has invalid schema (missing id): {c}")
         if "text" not in c or "category" not in c:
-            raise ValueError(f"claim sai schema (thiếu text/category): {c}")
+            raise ValueError(f"claim has invalid schema (missing text/category): {c}")
         if c["category"] not in ("feature", "bugfix", "refactor", "perf", "ux", "docs"):
-            raise ValueError(f"category không hợp lệ: {c.get('category')}")
+            raise ValueError(f"invalid category: {c.get('category')}")
     return data
 
 
 def extract_claims(snapshot: dict, cfg: dict, session_dir: Path,
                    chat=_default_chat) -> list[dict]:
-    """Tách claim từ snapshot body. Lưu claims.json, trả về list claims."""
+    """Extract claims from the snapshot body. Save claims.json, return the claims list."""
     description = f"# Title: {snapshot['title']}\n\n{snapshot['body']}"
     file_names = [f["filename"] for f in snapshot.get("files", [])]
     messages = [

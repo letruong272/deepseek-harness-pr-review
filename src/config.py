@@ -1,4 +1,4 @@
-"""Cấu hình từ environment. Tất cả env đều optional."""
+"""Configuration from the environment. All env vars are optional."""
 import os
 from dataclasses import dataclass
 from pathlib import Path

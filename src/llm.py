@@ -1,4 +1,4 @@
-"""OpenAI-compatible chat completion qua stdlib (không cần thêm dependency)."""
+"""OpenAI-compatible chat completion via stdlib (no extra dependencies)."""
 import json
 import time
 import urllib.error
@@ -7,11 +7,11 @@ import urllib.request
 
 def chat(messages: list[dict], *, model: str, api_key: str, base_url: str,
          max_tokens: int = 16384, retries: int = 3) -> str:
-    """POST {base_url}/chat/completions. Retry tối đa `retries` lần (timeout/429/5xx).
+    """POST {base_url}/chat/completions. Retry up to `retries` times (timeout/429/5xx).
 
-    max_tokens mặc định 16384: deepseek-v4-flash là reasoning model, dành phần
-    lớn tokens cho reasoning_content trước khi trả content thật — 4096 quá nhỏ
-    (finish_reason=length, content rỗng).
+    Default max_tokens 16384: deepseek-v4-flash is a reasoning model that spends
+    most of its tokens on reasoning_content before returning real content — 4096
+    is too small (finish_reason=length, empty content).
     """
     payload = json.dumps({
         "model": model,

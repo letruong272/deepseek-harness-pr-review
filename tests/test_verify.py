@@ -7,7 +7,7 @@ from verify import build_verify_prompt, parse_findings, setup_workspace
 
 
 def test_setup_workspace_clones_and_checks_out(tmp_path):
-    # Tạo "remote" repo local với nhánh pull/7/head
+    # Create a local "remote" repo with a pull/7/head branch
     origin = tmp_path / "origin"
     origin.mkdir()
     subprocess.run(["git", "init", "-q", "-b", "main"], cwd=origin, check=True)
@@ -46,7 +46,7 @@ def test_parse_findings_invalid(tmp_path):
 
 def test_parse_findings_missing(tmp_path):
     f = tmp_path / "findings.json"
-    with pytest.raises(RuntimeError, match="không tồn tại"):
+    with pytest.raises(RuntimeError, match="does not exist"):
         parse_findings(f)
 
 

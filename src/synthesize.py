@@ -1,11 +1,11 @@
-"""Phase 5: tổng hợp report tiếng Việt + post comment tiếng Anh lên PR."""
+"""Phase 5: synthesize the report + post an English comment on the PR."""
 from pathlib import Path
 
 from gh import run_gh
 
 MARKER = "<!-- harness-pr-review -->"
-STATUS_VN = {"PASS": "ĐÚNG", "FAIL": "SAI", "PARTIAL": "ĐÚNG MỘT PHẦN",
-             "UNVERIFIED": "CHƯA XÁC MINH"}
+STATUS_LABELS = {"PASS": "Matches", "FAIL": "Mismatch", "PARTIAL": "Partial",
+                 "UNVERIFIED": "Unverified"}
 
 
 def _cell(text, max_len=200):
@@ -35,49 +35,49 @@ def _overall_verdict(findings: dict) -> str:
 
 def build_report(snapshot: dict, claims: list[dict], findings: dict,
                  answers: list[dict], session_dir: Path) -> str:
-    """Viết report.md tiếng Việt. Trả về nội dung report."""
+    """Write report.md. Returns the report content."""
     verdict = _overall_verdict(findings)
     text_by_id = {cl["id"]: cl.get("text", "") for cl in claims}
     lines = [
         f"# Review PR #{snapshot['pr']} — {snapshot['title']}",
         "",
-        f"- Tác giả: {snapshot['author']} | Base: {snapshot['base']} → Head: {snapshot['head']}",
-        f"- Files thay đổi: {len(snapshot['files'])} | Commits: {len(snapshot['commits'])}",
+        f"- Author: {snapshot['author']} | Base: {snapshot['base']} → Head: {snapshot['head']}",
+        f"- Files changed: {len(snapshot['files'])} | Commits: {len(snapshot['commits'])}",
         f"## Verdict: {verdict}",
         "",
         "## Claims",
         "",
-        "| Claim | Nội dung | Trạng thái | Bằng chứng | Ghi chú |",
+        "| Claim | Content | Status | Evidence | Notes |",
         "|---|---|---|---|---|",
     ]
     for c in findings.get("claims", []):
         text = text_by_id.get(c["id"], c.get("text", ""))
         lines.append(
-            f"| {c['id']} | {_cell(text)} | {STATUS_VN.get(c['status'], c['status'])} | "
+            f"| {c['id']} | {_cell(text)} | {STATUS_LABELS.get(c['status'], c['status'])} | "
             f"{_cell(', '.join(c.get('evidence', [])) or '-')} | {_cell(c.get('note', ''))} |")
     lines += [
-        "", "## Docs (so với thực tế)", "",
-        "| Doc | Trạng thái | Khác biệt |", "|---|---|---|",
+        "", "## Docs vs reality", "",
+        "| Doc | Status | Difference |", "|---|---|---|",
     ]
     for d in findings.get("docs", []):
         lines.append(f"| {_cell(d['path'])} | {d['status']} | {_cell(d.get('what', ''))} |")
     lines += [
-        "", "## Tác động tới requirement", "",
-        "| Requirement | Impact | Chi tiết |", "|---|---|---|",
+        "", "## Requirement impact", "",
+        "| Requirement | Impact | Detail |", "|---|---|---|",
     ]
     for i in findings.get("impact", []):
         lines.append(f"| {_cell(i['requirement'])} | {i['impact']} | {_cell(i.get('detail', ''))} |")
     lines += [
         "", "## Review threads", "",
-        "| Comment | Trạng thái | Ghi chú |", "|---|---|---|",
+        "| Comment | Status | Notes |", "|---|---|---|",
     ]
     for t in findings.get("threads", []):
         lines.append(f"| {_cell(t['text'], max_len=120)} | {t['status']} | {_cell(t.get('note', ''))} |")
-    lines += ["", "## Confirm log", ""]
+    lines += ["", "## Confirmation log", ""]
     for a in answers:
         lines.append(f"- **{a['question']}** → {a['answer']}")
     if not answers:
-        lines.append("- (không có)")
+        lines.append("- (none)")
     report = "\n".join(lines) + "\n"
 
     session_dir.mkdir(parents=True, exist_ok=True)
@@ -87,16 +87,16 @@ def build_report(snapshot: dict, claims: list[dict], findings: dict,
 
 def build_comment(snapshot: dict, claims: list[dict], findings: dict,
                   answers: list[dict], report_content: str | None = None) -> str:
-    """Xây comment tiếng Anh (1 lần duy nhất, có marker).
+    """Build the English comment (single one, with marker).
 
-    Nếu report_content được truyền, comment chứa toàn bộ report (đủ thông tin
-    để đọc trực tiếp trên PR); ngược lại chỉ là tóm tắt.
+    If report_content is passed, the comment embeds the whole report (enough
+    information to read directly on the PR); otherwise it is only a summary.
     """
     verdict = _overall_verdict(findings)
     if report_content:
         return (
             f"## Harness PR Review — Verdict: {verdict}\n\n"
-            f"<details open>\n\n<summary>Full report (tiếng Việt)</summary>\n\n"
+            f"<details open>\n\n<summary>Full report</summary>\n\n"
             f"{report_content}\n\n</details>\n\n{MARKER}"
         )
     claim_lines = "\n".join(
@@ -107,7 +107,7 @@ def build_comment(snapshot: dict, claims: list[dict], findings: dict,
         f"- {_bullet(t['text'])} → {t['status']}" for t in findings.get("threads", []))
     return (
         f"## Harness PR Review\n\n"
-        f"**Verdict: description is {verdict}**\n\n"
+        f"**Verdict: {verdict}**\n\n"
         f"### Claims\n{claim_lines or '- none'}\n\n"
         f"### Docs vs reality\n{doc_lines or '- none'}\n\n"
         f"### Unresolved threads\n{thread_lines or '- none'}\n\n"
@@ -121,9 +121,9 @@ def build_comment(snapshot: dict, claims: list[dict], findings: dict,
 
 def post_comment(owner: str, repo: str, n: int, body: str, *,
                  gh=run_gh, list_comments=None) -> bool:
-    """Post comment nếu chưa có marker; ngược lại UPDATE comment cũ (giữ 1 comment duy nhất).
+    """Post a comment if there is no marker; otherwise UPDATE the existing comment (keep a single comment).
 
-    Trả về True nếu tạo mới, False nếu đã update comment cũ.
+    Returns True if a new one was created, False if an existing comment was updated.
     """
     if list_comments is None:
         list_comments = lambda: gh(["api", f"repos/{owner}/{repo}/issues/{n}/comments", "--paginate"])

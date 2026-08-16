@@ -1,4 +1,4 @@
-"""Phase 1: fetch PR metadata, files, commits, review threads từ GitHub."""
+"""Phase 1: fetch PR metadata, files, commits, review threads from GitHub."""
 import json
 import sys
 from pathlib import Path
@@ -57,13 +57,13 @@ def _get_threads(owner: str, repo: str, n: int, gh) -> list[dict]:
                 "outdated": node["isOutdated"],
             })
     if truncated:
-        print("[snapshot] warning: review threads truncated at 100 — dữ liệu snapshot thiếu", file=sys.stderr)
+        print("[snapshot] warning: review threads truncated at 100 — snapshot data incomplete", file=sys.stderr)
     return threads
 
 
 def build_snapshot(owner: str, repo: str, n: int, session_dir: Path,
                    gh=_default_gh) -> dict:
-    """Fetch PR data và lưu snapshot.json vào session_dir. Trả về dict snapshot."""
+    """Fetch PR data and save snapshot.json into session_dir. Returns the snapshot dict."""
     meta = gh([f"api", f"repos/{owner}/{repo}/pulls/{n}"])
     files = gh([f"api", f"repos/{owner}/{repo}/pulls/{n}/files", "--paginate"])
     commits = gh([f"api", f"repos/{owner}/{repo}/pulls/{n}/commits", "--paginate"])

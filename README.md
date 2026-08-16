@@ -1,55 +1,55 @@
 # Harness PR Review
 
-Headless PR review chạy local dựa trên DeepSeek Harness SDK: deep-dive code,
-xác minh PR description theo từng claim, kiểm tra docs trong repo có đúng với
-thực tế không, phân tích tác động tới requirement, human-in-the-loop khi không
-chắc (≤20 chữ/câu). Output: report tiếng Việt local + 1 comment tiếng Anh lên PR.
+Headless PR review running locally on the DeepSeek Harness SDK: deep-dive code,
+verify the PR description claim by claim, check whether docs in the repo match
+reality, analyze requirement impact, and use human-in-the-loop when uncertain
+(≤20 words/question). Output: local English report + one English comment on the PR.
 
-## Cài đặt
+## Install
 
-Yêu cầu: Python 3.10+ (khuyến nghị 3.11), `gh` CLI đã auth.
+Requirements: Python 3.10+ (recommended 3.11), `gh` CLI already authenticated.
 
 ```bash
 python -m venv .venv && . .venv/bin/activate
-pip install -e '.[dev]'   # zsh cần quote; SDK lấy từ PyPI (deepseek-harness-sdk)
-gh auth login          # bắt buộc
-export DEEPSEEK_API_KEY=sk-...   # xem .env.example
+pip install -e '.[dev]'   # zsh needs quotes; SDK comes from PyPI (deepseek-harness-sdk)
+gh auth login          # required
+export DEEPSEEK_API_KEY=sk-...   # see .env.example
 ```
 
-## Dùng
+## Usage
 
-Chạy từ thư mục repo này (cần PYTHONPATH=src nếu không cài -e):
+Run from this repo's directory (PYTHONPATH=src needed if not installed with -e):
 
 ```bash
 PYTHONPATH=src python -m src.run owner/repo 123              # interactive
-PYTHONPATH=src python -m src.run owner/repo 123 --skip-human # batch, không hỏi
-PYTHONPATH=src python -m src.run owner/repo 123 --no-post    # không post comment
-PYTHONPATH=src python -m src.run owner/repo#123              # cú pháp rút gọn
+PYTHONPATH=src python -m src.run owner/repo 123 --skip-human # batch, no questions
+PYTHONPATH=src python -m src.run owner/repo 123 --no-post    # don't post a comment
+PYTHONPATH=src python -m src.run owner/repo#123              # shorthand syntax
 ```
 
-Kết quả tại `sessions/<owner>/<repo>/pr-<n>/report.md` (đổi thư mục bằng `DSH_SESSION_ROOT`).
+Results land in `sessions/<owner>/<repo>/pr-<n>/report.md` (change the directory with `DSH_SESSION_ROOT`).
 
 ## Pipeline
 
 1. **Snapshot** — fetch PR metadata, diff files, commits, review threads (GitHub REST + GraphQL)
-2. **Claims** — LLM tách description thành claims kiểm chứng được
-3. **Verify** — DeepSeek Harness agent deep-dive trong worktree disposable:
-   verify từng claim, docs reality-check (MATCH/STALE/WRONG/FABRICATED),
-   tác động requirement, trạng thái review threads
-4. **Human gate** — hỏi xác nhận (≤20 chữ/câu) khi docs sai hoặc claim chưa chắc
-5. **Synthesize** — report.md tiếng Việt + 1 comment tiếng Anh lên PR (idempotent)
+2. **Claims** — LLM splits the description into verifiable claims
+3. **Verify** — DeepSeek Harness agent deep-dives in a disposable worktree:
+   verifies each claim, docs reality-check (MATCH/STALE/WRONG/FABRICATED),
+   requirement impact, review thread status
+4. **Human gate** — asks for confirmation (≤20 words/question) when docs are wrong or claims are uncertain
+5. **Synthesize** — English report.md + one English comment on the PR (idempotent)
 
-## Chạy test
+## Running tests
 
 ```bash
 python -m pytest -v
 ```
 
-## Cấu hình
+## Configuration
 
-| Env | Mặc định | Ý nghĩa |
+| Env | Default | Meaning |
 |---|---|---|
-| `DEEPSEEK_API_KEY` | — | API key DeepSeek |
-| `DSH_MODEL` | `deepseek-v4-flash` | Model dùng cho agent + claim extraction |
-| `DEEPSEEK_BASE_URL` | `https://api.deepseek.com/v1` | Endpoint OpenAI-compatible |
-| `DSH_SESSION_ROOT` | `sessions` | Thư mục lưu kết quả từng phase |
+| `DEEPSEEK_API_KEY` | — | DeepSeek API key |
+| `DSH_MODEL` | `deepseek-v4-flash` | Model used for the agent + claim extraction |
+| `DEEPSEEK_BASE_URL` | `https://api.deepseek.com/v1` | OpenAI-compatible endpoint |
+| `DSH_SESSION_ROOT` | `sessions` | Directory storing per-phase results |

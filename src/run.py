@@ -25,9 +25,9 @@ def _write_failed_report(session_dir: Path, error: Exception) -> None:
     lines = [
         "# Review FAILED",
         "",
-        f"- Lỗi: {error}",
-        f"- Phase lỗi: xem stderr",
-        f"- Đã có: {[p.name for p in sorted(session_dir.iterdir()) if p.is_file()]}",
+        f"- Error: {error}",
+        f"- Failed phase: see stderr",
+        f"- Existing artifacts: {[p.name for p in sorted(session_dir.iterdir()) if p.is_file()]}",
         "",
     ]
     (session_dir / "report.md").write_text("\n".join(lines))
@@ -35,20 +35,20 @@ def _write_failed_report(session_dir: Path, error: Exception) -> None:
 
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(prog="harness-pr-review")
-    parser.add_argument("pr", help="<owner>/<repo> <pr-number> hoặc owner/repo#n")
+    parser.add_argument("pr", help="<owner>/<repo> <pr-number> or owner/repo#n")
     parser.add_argument("number", nargs="?", type=int,
-                        help="PR number (nếu pr = owner/repo#n thì bỏ qua)")
+                        help="PR number (omit if pr = owner/repo#n)")
     parser.add_argument("--skip-human", action="store_true",
-                        help="không hỏi, đánh dấu SKIPPED")
+                        help="don't ask, mark as SKIPPED")
     parser.add_argument("--force", action="store_true",
-                        help="chạy lại các phase đã có kết quả")
+                        help="re-run phases that already have results")
     parser.add_argument("--no-post", action="store_true",
-                        help="không post comment lên PR")
+                        help="don't post a comment on the PR")
     parser.add_argument("--dry-run", action="store_true",
-                        help="chỉ build report, không post")
+                        help="only build the report, don't post")
     parser.add_argument("--fixtures", type=Path, default=None,
-                        help="thư mục chứa snapshot.json/claims.json/findings.json "
-                             "(dùng cho e2e, bỏ qua gh & model)")
+                        help="directory containing snapshot.json/claims.json/findings.json "
+                             "(for e2e, skips gh & model)")
     args = parser.parse_args(argv)
 
     base = args.pr.split("#")[0]
@@ -60,15 +60,15 @@ def main(argv: list[str] | None = None) -> int:
     owner, repo = parts
     num = str(args.number if args.number is not None else args.pr.split("#")[1])
     if not num.isdigit():
-        print(f"PR number không hợp lệ: {num}", file=sys.stderr)
+        print(f"invalid PR number: {num}", file=sys.stderr)
         return 2
 
     cfg = load_config()
     if not cfg.api_key and args.fixtures is None:
-        print("DEEPSEEK_API_KEY chưa set (xem .env.example)", file=sys.stderr)
+        print("DEEPSEEK_API_KEY not set (see .env.example)", file=sys.stderr)
         return 3
     if not gh_available() and args.fixtures is None:
-        print("gh CLI chưa có hoặc chưa auth (gh auth login)", file=sys.stderr)
+        print("gh CLI not installed or not authenticated (gh auth login)", file=sys.stderr)
         return 2
 
     session_dir = cfg.session_root / owner / repo / f"pr-{num}"
@@ -79,7 +79,7 @@ def main(argv: list[str] | None = None) -> int:
             for name in ("snapshot.json", "claims.json", "findings.json"):
                 src = args.fixtures / name
                 if not src.exists():
-                    print(f"fixture thiếu: {src}", file=sys.stderr)
+                    print(f"missing fixture: {src}", file=sys.stderr)
                     return 2
                 (session_dir / name).write_text(src.read_text())
             findings = json.loads((session_dir / "findings.json").read_text())
@@ -119,12 +119,12 @@ def main(argv: list[str] | None = None) -> int:
         body = build_comment(snapshot, claims, findings, answers,
                              report_content=report)
         if post_comment(owner, repo, int(num), body):
-            print("Đã post comment lên PR.")
+            print("Posted comment to PR.")
         else:
-            print("Comment đã tồn tại — đã cập nhật full report lên PR.")
+            print("Comment exists — updated with full report.")
         return 0
     except (RuntimeError, ValueError, OSError) as e:
-        print(f"Lỗi: {e}", file=sys.stderr)
+        print(f"Error: {e}", file=sys.stderr)
         _write_failed_report(session_dir, e)
         return 1
 
