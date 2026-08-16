@@ -109,9 +109,11 @@ def test_verify_run_bumps_rounds(tmp_path, monkeypatch):
                      "unresolved_questions": []}
 
     def fake_build_snapshot(owner, repo, n, session_dir, gh=None):
+        (session_dir / "snapshot.json").write_text(json.dumps(fake_snapshot))
         return fake_snapshot
 
     def fake_extract_claims(snapshot, cfg, session_dir, chat=None):
+        (session_dir / "claims.json").write_text(json.dumps([]))
         return []
 
     def fake_setup_workspace(owner, repo, n, workspace, remote_url=None):
