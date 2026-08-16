@@ -1,0 +1,6 @@
+repos:
+  - sample-org/sample-app
+interval_minutes: 10
+post_comment: true
+skip_human: true
+drafts: false
