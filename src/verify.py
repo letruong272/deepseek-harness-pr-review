@@ -16,18 +16,21 @@ VERIFY_SCHEMA = """{
 }"""
 
 
+def _run_git(args: list[str], cwd: Path) -> None:
+    proc = subprocess.run(["git", *args], cwd=cwd, capture_output=True, text=True)
+    if proc.returncode != 0:
+        raise RuntimeError(f"git {' '.join(args)} failed: {proc.stderr.strip()}")
+
+
 def setup_workspace(owner: str, repo: str, n: int, workspace: Path,
                     remote_url: str | None = None) -> None:
     """Clone repo (lần đầu) + checkout nhánh PR head vào workspace (disposable)."""
     if not workspace.exists():
         url = remote_url or f"https://github.com/{owner}/{repo}.git"
-        subprocess.run(["git", "clone", "--no-checkout", url, str(workspace)],
-                       check=True, capture_output=True)
+        _run_git(["clone", "--no-checkout", url, str(workspace)], workspace.parent)
     branch = f"pr-{n}"
-    subprocess.run(["git", "fetch", "origin", f"pull/{n}/head:{branch}"],
-                   cwd=workspace, check=True, capture_output=True)
-    subprocess.run(["git", "checkout", "-f", branch], cwd=workspace,
-                   check=True, capture_output=True)
+    _run_git(["fetch", "origin", f"pull/{n}/head:{branch}"], workspace)
+    _run_git(["checkout", "-f", branch], workspace)
 
 
 def build_verify_prompt(snapshot: dict, claims: list[dict]) -> str:

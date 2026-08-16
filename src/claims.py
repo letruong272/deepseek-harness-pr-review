@@ -22,6 +22,13 @@ def _parse_claims(raw: str) -> list[dict]:
     data = json.loads(text)
     if not isinstance(data, list):
         raise ValueError("claims response must be a list")
+    for c in data:
+        if not isinstance(c, dict) or "id" not in c:
+            raise ValueError(f"claim sai schema (thiếu id): {c}")
+        if "text" not in c or "category" not in c:
+            raise ValueError(f"claim sai schema (thiếu text/category): {c}")
+        if c["category"] not in ("feature", "bugfix", "refactor", "perf", "ux", "docs"):
+            raise ValueError(f"category không hợp lệ: {c.get('category')}")
     return data
 
 

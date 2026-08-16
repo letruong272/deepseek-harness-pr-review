@@ -21,6 +21,18 @@ def _load_or_skip(name: str, session_dir: Path, force: bool) -> dict | list | No
     return None
 
 
+def _write_failed_report(session_dir: Path, error: Exception) -> None:
+    lines = [
+        "# Review FAILED",
+        "",
+        f"- Lỗi: {error}",
+        f"- Phase lỗi: xem stderr",
+        f"- Đã có: {[p.name for p in sorted(session_dir.iterdir()) if p.is_file()]}",
+        "",
+    ]
+    (session_dir / "report.md").write_text("\n".join(lines))
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(prog="harness-pr-review")
     parser.add_argument("pr", help="<owner>/<repo> <pr-number> hoặc owner/repo#n")
@@ -83,12 +95,14 @@ def main(argv: list[str] | None = None) -> int:
                 claims = extract_claims(
                     snapshot, {"model": cfg.model, "api_key": cfg.api_key,
                                "base_url": cfg.base_url}, session_dir)
-            workspace = session_dir / "workspace"
-            setup_workspace(owner, repo, int(num), workspace)
             findings = _load_or_skip("findings.json", session_dir, args.force)
             if findings is None:
+                workspace = session_dir / "workspace"
+                setup_workspace(owner, repo, int(num), workspace)
                 findings = run_verify(
                     {"model": cfg.model}, workspace, session_dir, snapshot, claims)
+                (session_dir / "findings.json").write_text(
+                    json.dumps(findings, indent=2))
 
         answers = _load_or_skip("answers.json", session_dir, args.force)
         if answers is None:
@@ -110,6 +124,7 @@ def main(argv: list[str] | None = None) -> int:
         return 0
     except (RuntimeError, ValueError) as e:
         print(f"Lỗi: {e}", file=sys.stderr)
+        _write_failed_report(session_dir, e)
         return 1
 
 
