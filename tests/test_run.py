@@ -136,3 +136,38 @@ def test_verify_run_bumps_rounds(tmp_path, monkeypatch):
 
     assert main(["demo/app", "7", "--no-post", "--force"]) == 0  # force → bump
     assert rounds_file.read_text().strip() == "2"
+
+
+def test_doctor_ready(tmp_path, monkeypatch, capsys):
+    monkeypatch.setenv("DEEPSEEK_API_KEY", "sk-test")
+    monkeypatch.setattr("run.gh_available", lambda: True)
+    monkeypatch.setattr("run.run_gh", lambda args, **kw: {"login": "dev1"})
+
+    code = main(["doctor"])
+    assert code == 0
+    out = capsys.readouterr().out
+    assert "Python 3.10+" in out
+    assert "dev1" in out
+    assert "DEEPSEEK_API_KEY set" in out
+    assert "Ready" in out
+
+
+def test_doctor_missing_key(tmp_path, monkeypatch, capsys):
+    monkeypatch.delenv("DEEPSEEK_API_KEY", raising=False)
+    monkeypatch.setattr("run.gh_available", lambda: True)
+    monkeypatch.setattr("run.run_gh", lambda args, **kw: {"login": "dev1"})
+
+    code = main(["doctor"])
+    assert code == 1
+    out = capsys.readouterr().out
+    assert "DEEPSEEK_API_KEY not set" in out
+
+
+def test_doctor_no_gh(tmp_path, monkeypatch, capsys):
+    monkeypatch.setenv("DEEPSEEK_API_KEY", "sk-test")
+    monkeypatch.setattr("run.gh_available", lambda: False)
+
+    code = main(["doctor"])
+    assert code == 1
+    out = capsys.readouterr().out
+    assert "gh CLI not installed" in out

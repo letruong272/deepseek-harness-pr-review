@@ -1,17 +1,75 @@
 """CLI entry: orchestrates 5 phase. Usage:
-python -m src.run <owner>/<repo> <pr> [--skip-human] [--force] [--no-post]
-                    [--fixtures DIR] [--dry-run]
+harness-pr-review <owner>/<repo> <pr> [--skip-human] [--force] [--no-post]
+                  [--fixtures DIR] [--dry-run]
+harness-pr-review doctor
 """
 import argparse
+import importlib.metadata
 import json
 import sys
 from pathlib import Path
 
 from config import load_config
-from gh import gh_available
+from gh import gh_available, run_gh
 from human_gate import run_gate
 from synthesize import build_comment, build_report, post_comment
 from verify import run_verify, setup_workspace
+
+
+def _doctor() -> int:
+    """Check readiness: Python, gh, API key, SDK, config. Exit 0 if ready."""
+    import platform
+
+    ok = True
+    py = platform.python_version_tuple()
+    if (int(py[0]), int(py[1])) >= (3, 10):
+        print(f"✓ Python 3.10+ ({platform.python_version()})")
+    else:
+        print(f"✗ Python 3.10+ required, found {platform.python_version()}")
+        ok = False
+
+    if gh_available():
+        try:
+            user = run_gh(["api", "user"])
+            print(f"✓ gh CLI installed + authenticated ({user.get('login', '?')})")
+        except RuntimeError:
+            print("✗ gh CLI installed but not authenticated — run `gh auth login`")
+            ok = False
+    else:
+        print("✗ gh CLI not installed — install GitHub CLI and run `gh auth login`")
+        ok = False
+
+    cfg = load_config()
+    if cfg.api_key:
+        print("✓ DEEPSEEK_API_KEY set")
+    else:
+        print("✗ DEEPSEEK_API_KEY not set — see .env.example")
+        ok = False
+
+    try:
+        importlib.metadata.version("deepseek-harness-sdk")
+        print(f"✓ deepseek-harness-sdk installed "
+              f"({importlib.metadata.version('deepseek-harness-sdk')})")
+    except importlib.metadata.PackageNotFoundError:
+        print("✗ deepseek-harness-sdk not installed — run `pip install -e '.[dev]'`")
+        ok = False
+
+    from autoreview_config import load_config as load_autoreview_config
+
+    config_path = Path("autoreview.yml")
+    if config_path.exists():
+        try:
+            acfg = load_autoreview_config(config_path)
+            print(f"✓ autoreview.yml valid ({len(acfg['repos'])} repos)")
+        except (ValueError, OSError) as e:
+            print(f"✗ autoreview.yml invalid: {e}")
+            ok = False
+    else:
+        print("· autoreview.yml not found (optional — only needed for auto review)")
+
+    if ok:
+        print("\nReady. Run: harness-pr-review owner/repo 123")
+    return 0 if ok else 1
 
 
 def _load_or_skip(name: str, session_dir: Path, force: bool) -> dict | list | None:
@@ -45,7 +103,7 @@ def _bump_rounds(session_dir: Path) -> None:
 
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(prog="harness-pr-review")
-    parser.add_argument("pr", help="<owner>/<repo> <pr-number> or owner/repo#n")
+    parser.add_argument("pr", nargs="?", help="<owner>/<repo> <pr-number> or owner/repo#n")
     parser.add_argument("number", nargs="?", type=int,
                         help="PR number (omit if pr = owner/repo#n)")
     parser.add_argument("--skip-human", action="store_true",
@@ -59,7 +117,14 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--fixtures", type=Path, default=None,
                         help="directory containing snapshot.json/claims.json/findings.json "
                              "(for e2e, skips gh & model)")
+    parser.add_argument("doctor", nargs="?", help="check readiness (Python, gh, API key, SDK)")
     args = parser.parse_args(argv)
+
+    if args.doctor == "doctor" or args.pr == "doctor":
+        return _doctor()
+    if args.pr is None:
+        parser.print_help()
+        return 2
 
     base = args.pr.split("#")[0]
     parts = base.split("/")

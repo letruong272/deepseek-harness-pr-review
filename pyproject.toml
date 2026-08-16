@@ -1,3 +1,7 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
 [project]
 name = "deepseek-harness-pr-review"
 version = "0.1.0"
@@ -8,9 +12,17 @@ dependencies = [
     "pyyaml",
 ]
 
+[project.scripts]
+harness-pr-review = "src.run:main"
+autoreview = "src.autoreview:main"
+
 [project.optional-dependencies]
 dev = ["pytest"]
 web = ["fastapi", "uvicorn", "jinja2", "httpx"]
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["src*", "web*"]
 
 [tool.pytest.ini_options]
 pythonpath = ["src", "."]

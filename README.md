@@ -56,14 +56,18 @@ export DEEPSEEK_API_KEY=sk-...   # see .env.example
 
 ## Usage
 
-Run from this repo's directory (PYTHONPATH=src needed if not installed with -e):
+After `pip install -e '.[dev]'` you get two commands:
 
 ```bash
-PYTHONPATH=src python -m src.run owner/repo 123              # interactive
-PYTHONPATH=src python -m src.run owner/repo 123 --skip-human # batch, no questions
-PYTHONPATH=src python -m src.run owner/repo 123 --no-post    # don't post a comment
-PYTHONPATH=src python -m src.run owner/repo#123              # shorthand syntax
+harness-pr-review doctor                # check readiness: Python, gh, API key, SDK
+harness-pr-review owner/repo 123        # review one PR (interactive)
+harness-pr-review owner/repo 123 --skip-human   # batch, no questions
+harness-pr-review owner/repo 123 --no-post      # don't post a comment
+autoreview --once                       # auto review: single pass
+autoreview --daemon                     # auto review: every interval_minutes
 ```
+
+(Or run from source: `PYTHONPATH=src python -m src.run owner/repo 123`)
 
 Results land in `sessions/<owner>/<repo>/pr-<n>/report.md` (change the directory with `DSH_SESSION_ROOT`).
 
