@@ -69,7 +69,18 @@ def _doctor() -> int:
 
     if ok:
         print("\nReady. Run: harness-pr-review owner/repo 123")
+        print("Web dashboard: harness-pr-review web  →  http://127.0.0.1:6789")
     return 0 if ok else 1
+
+
+def _web() -> int:
+    """Launch the web dashboard on 127.0.0.1:6789."""
+    import uvicorn
+
+    from web.server import app
+
+    uvicorn.run(app, host="127.0.0.1", port=6789)
+    return 0
 
 
 def _load_or_skip(name: str, session_dir: Path, force: bool) -> dict | list | None:
@@ -157,6 +168,7 @@ def main(argv: list[str] | None = None) -> int:
                         help="print the installed version")
     parser.add_argument("doctor", nargs="?", help="check readiness (Python, gh, API key, SDK)")
     parser.add_argument("update", nargs="?", help="self-update from GitHub")
+    parser.add_argument("web", nargs="?", help="open the web dashboard at http://127.0.0.1:6789")
     args = parser.parse_args(argv)
 
     if args.version:
@@ -165,6 +177,8 @@ def main(argv: list[str] | None = None) -> int:
         return _doctor()
     if args.update == "update" or args.pr == "update":
         return _update()
+    if args.web == "web" or args.pr == "web":
+        return _web()
     if args.pr is None:
         parser.print_help()
         return 2

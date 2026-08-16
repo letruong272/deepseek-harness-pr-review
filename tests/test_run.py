@@ -197,3 +197,17 @@ def test_update_command(monkeypatch, capsys):
     assert "install" in calls[0]
     assert "git+https://github.com/nexpeakcore/deepseek-harness-pr-review.git" in calls[0]
     assert "Updated" in capsys.readouterr().out
+
+
+def test_web_command_starts_uvicorn(monkeypatch):
+    started = {}
+    import sys
+
+    fake_uvicorn = type("U", (), {
+        "run": lambda app, host, port: started.update(
+            {"host": host, "port": port})})
+    monkeypatch.setitem(sys.modules, "uvicorn", fake_uvicorn)
+
+    code = main(["web"])
+    assert code == 0
+    assert started == {"host": "127.0.0.1", "port": 6789}
