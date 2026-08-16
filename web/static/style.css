@@ -69,3 +69,5 @@ a.card.auto { border-style: dashed; }
 .gh-link { font-size: 13px; font-weight: 400; color: #0366d6;
            text-decoration: none; margin-left: 10px; }
 .gh-link:hover { text-decoration: underline; }
+.breakdown { margin-top: 8px; font-size: 12px; }
+.verdict { margin-right: 4px; }

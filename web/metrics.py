@@ -103,8 +103,22 @@ def pr_record(session_root: Path, owner: str, repo: str, n: int) -> dict | None:
                     if c.get("status") in ("FAIL", "PARTIAL"))
                 + sum(1 for i in impact
                       if i.get("impact") in ("BROKEN", "RISK")),
+        "bug_breakdown": {
+            "claims_fail": sum(1 for c in claims if c.get("status") == "FAIL"),
+            "claims_partial": sum(1 for c in claims
+                                  if c.get("status") == "PARTIAL"),
+            "impact_broken": sum(1 for i in impact
+                                 if i.get("impact") == "BROKEN"),
+            "impact_risk": sum(1 for i in impact if i.get("impact") == "RISK"),
+        },
         "doc_errors": sum(1 for d in docs
                           if d.get("status") in ("WRONG", "FABRICATED", "STALE")),
+        "doc_breakdown": {
+            "wrong": sum(1 for d in docs if d.get("status") == "WRONG"),
+            "fabricated": sum(1 for d in docs
+                              if d.get("status") == "FABRICATED"),
+            "stale": sum(1 for d in docs if d.get("status") == "STALE"),
+        },
         "open_questions": sum(1 for a in answers
                               if a.get("answer") in ("SKIPPED", "")),
         "rounds": _read_rounds(session_dir),
