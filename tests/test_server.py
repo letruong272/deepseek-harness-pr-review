@@ -293,3 +293,16 @@ def test_repo_page_has_review_buttons(client, monkeypatch):
     resp = client.get("/repos/sample-org/sample-app")
     assert resp.status_code == 200
     assert "Review now" in resp.text
+
+
+def test_repo_list_shows_auto_repos_without_data(tmp_path, monkeypatch):
+    cfg_path = tmp_path / "autoreview.yml"
+    cfg_path.write_text("org: nexpeakcore\nrepos:\n  sample-app: auto\n")
+    monkeypatch.setenv("AUTOREVIEW_CONFIG", str(cfg_path))
+    monkeypatch.setenv("DSH_SESSION_ROOT", str(tmp_path / "sessions"))
+    client = TestClient(app)
+    r = client.get("/")
+    assert r.status_code == 200
+    assert "sample-org/sample-app" in r.text
+    assert "AUTO" in r.text
+    assert "reviewed automatically" in r.text

@@ -9,7 +9,7 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
 from autoreview_config import load_config as load_autoreview_config
-from autoreview_config import list_repos, remove_repo, set_repo_mode
+from autoreview_config import auto_repos, list_repos, remove_repo, set_repo_mode
 from config import load_config
 from run import main as run_main
 from web import metrics
@@ -36,8 +36,27 @@ def repo_list(request: Request):
     for owner, repo in metrics.list_repos(root):
         rec = metrics.repo_record(root, owner, repo)
         if rec is not None:
+            rec["has_data"] = True
             repos.append(rec)
     repos.sort(key=lambda r: r["prs_total"], reverse=True)
+
+    # merge auto-configured repos that have no review data yet
+    seen = {(r["owner"], r["repo"]) for r in repos}
+    path = _config_path()
+    if path.exists():
+        try:
+            cfg = load_autoreview_config(path)
+            for owner, repo in auto_repos(cfg):
+                if (owner, repo) not in seen:
+                    repos.append({
+                        "owner": owner, "repo": repo,
+                        "prs_total": 0, "bugs_total": 0,
+                        "doc_errors_total": 0, "has_data": False,
+                        "mode": "auto",
+                    })
+        except (ValueError, OSError):
+            pass
+
     return templates.TemplateResponse(
         request, "repo_list.html", {"repos": repos})
 
