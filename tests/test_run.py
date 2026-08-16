@@ -211,3 +211,29 @@ def test_web_command_starts_uvicorn(monkeypatch):
     code = main(["web"])
     assert code == 0
     assert started == {"host": "127.0.0.1", "port": 6789}
+
+
+def test_web_command_missing_uvicorn(monkeypatch, capsys):
+    import sys as _sys
+
+    class NoUvicorn:
+        def find_module(self, name, path=None):
+            if name == "uvicorn":
+                raise ImportError
+            return None
+
+    monkeypatch.setitem(_sys.modules, "uvicorn", None)
+    monkeypatch.delitem(_sys.modules, "uvicorn", raising=False)
+    # force import failure bằng cách xóa khỏi sys.modules và chặn
+    import builtins
+    real_import = builtins.__import__
+
+    def fake_import(name, *args, **kwargs):
+        if name == "uvicorn":
+            raise ModuleNotFoundError("No module named 'uvicorn'")
+        return real_import(name, *args, **kwargs)
+
+    monkeypatch.setattr(builtins, "__import__", fake_import)
+    code = main(["web"])
+    assert code == 1
+    assert "web" in capsys.readouterr().err

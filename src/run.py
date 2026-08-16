@@ -75,7 +75,16 @@ def _doctor() -> int:
 
 def _web() -> int:
     """Launch the web dashboard on 127.0.0.1:6789."""
-    import uvicorn
+    try:
+        import uvicorn
+    except ModuleNotFoundError:
+        print("Web dashboard requires the 'web' extras. "
+              "Reinstall with:\n"
+              "  pip install -U 'deepseek-harness-pr-review[web] @ "
+              "git+https://github.com/nexpeakcore/deepseek-harness-pr-review.git'\n"
+              "(or re-run the one-liner installer, which includes them)",
+              file=sys.stderr)
+        return 1
 
     from web.server import app
 

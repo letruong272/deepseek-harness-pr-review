@@ -70,8 +70,9 @@ say "Upgrading pip inside the venv..."
 "$VENV_PY" -m pip install --quiet --upgrade pip
 
 # ------------------------------------------------------------ 4. install
-say "Installing / updating harness-pr-review from GitHub..."
-"$VENV_PY" -m pip install --quiet --upgrade "$REPO_URL"
+say "Installing / updating harness-pr-review (with web extras) from GitHub..."
+"$VENV_PY" -m pip install --quiet --upgrade \
+  "deepseek-harness-pr-review[web] @ $REPO_URL"
 
 # ------------------------------------------------------------ 5. symlinks
 mkdir -p "$BIN_DIR"
