@@ -122,7 +122,7 @@ def main(argv: list[str] | None = None) -> int:
         else:
             print("Comment đã tồn tại (có marker) — bỏ qua.")
         return 0
-    except (RuntimeError, ValueError) as e:
+    except (RuntimeError, ValueError, OSError) as e:
         print(f"Lỗi: {e}", file=sys.stderr)
         _write_failed_report(session_dir, e)
         return 1

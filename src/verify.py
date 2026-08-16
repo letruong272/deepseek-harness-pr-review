@@ -24,7 +24,12 @@ def _run_git(args: list[str], cwd: Path) -> None:
 
 def setup_workspace(owner: str, repo: str, n: int, workspace: Path,
                     remote_url: str | None = None) -> None:
-    """Clone repo (lần đầu) + checkout nhánh PR head vào workspace (disposable)."""
+    """Clone repo (lần đầu) + checkout nhánh PR head vào workspace (disposable).
+
+    Path phải resolve về absolute: subprocess cwd + target tương đối sẽ tạo
+    thư mục lồng sai vị trí (vd: pr-77/sessions/.../workspace).
+    """
+    workspace = workspace.resolve()
     if not workspace.exists():
         url = remote_url or f"https://github.com/{owner}/{repo}.git"
         _run_git(["clone", "--no-checkout", url, str(workspace)], workspace.parent)
