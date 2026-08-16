@@ -66,6 +66,31 @@ Then authenticate:
 gh auth login          # required
 export DEEPSEEK_API_KEY=sk-...   # see .env.example
 harness-pr-review doctor         # verify everything is ready
+```
+
+## Updating
+
+**Installed via pip (no clone):**
+
+```bash
+pip install -U git+https://github.com/nexpeakcore/deepseek-harness-pr-review.git
+```
+
+**Cloned for development:**
+
+```bash
+git pull origin main   # pull the latest code
+pip install -e .       # refresh entry points if pyproject.toml changed
+```
+
+**After updating:**
+
+- The auto-review poller (launchd/cron) picks up the new code on its next
+  pass — no restart needed.
+- A running web dashboard keeps the old code until restarted: stop the
+  process, then start it again (`python -m web.server`).
+- Your existing `sessions/` data and `autoreview.yml` are preserved — updates
+  never touch them.
 
 ## Usage
 
