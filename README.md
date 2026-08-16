@@ -11,7 +11,7 @@ Yêu cầu: Python 3.10+ (khuyến nghị 3.11), `gh` CLI đã auth.
 
 ```bash
 python -m venv .venv && . .venv/bin/activate
-pip install -e .[dev]
+pip install -e '.[dev]'   # zsh cần quote; SDK lấy từ PyPI (deepseek-harness-sdk)
 gh auth login          # bắt buộc
 export DEEPSEEK_API_KEY=sk-...   # xem .env.example
 ```
