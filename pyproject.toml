@@ -1,0 +1,15 @@
+[project]
+name = "harness-pr-review"
+version = "0.1.0"
+description = "Headless PR review automation on top of DeepSeek Harness"
+requires-python = ">=3.10"
+dependencies = [
+    "deepseek-harness-sdk",
+]
+
+[project.optional-dependencies]
+dev = ["pytest"]
+
+[tool.pytest.ini_options]
+pythonpath = ["src"]
+testpaths = ["tests"]
