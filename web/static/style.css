@@ -42,3 +42,14 @@ tr.failed td { background: #fdecea; }
 .tab-btn { background: #f4f6f8; border: 1px solid var(--border); padding: 6px 14px;
            border-radius: 6px 6px 0 0; cursor: pointer; font-size: 13px; }
 .tab-btn.active { background: #2c3e50; color: #fff; border-color: #2c3e50; }
+.config-block { background: #fff; border: 1px solid var(--border);
+                border-radius: 10px; padding: 16px; margin-bottom: 28px; }
+.config-block h2 { margin: 0 0 8px; font-size: 16px; }
+.add-form { display: flex; gap: 8px; margin-top: 12px; }
+.add-input { padding: 6px 10px; border: 1px solid var(--border); border-radius: 6px;
+             flex: 1; max-width: 320px; font-size: 13px; }
+.tab-btn.danger { color: #c0392b; }
+tr.unlisted td { color: #6b7280; }
+.v-auto { background: #eaf7ee; color: #27ae60; }
+.v-manual { background: #eef1f4; color: #6b7280; }
+.v-unlisted { background: #f4f6f8; color: #a0a6ad; }

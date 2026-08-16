@@ -4,6 +4,7 @@ import json
 import pytest
 from fastapi.testclient import TestClient
 
+from autoreview_config import load_config
 from web.server import app
 
 EMPTY_FINDINGS = {"claims": [], "docs": [], "impact": [], "threads": [],
@@ -83,3 +84,77 @@ def test_unknown_repo_404(client):
 
 def test_unknown_pr_404(client):
     assert client.get("/repos/sample-org/sample-app/pr/999").status_code == 404
+
+
+def test_api_config_and_toggle(tmp_path, monkeypatch):
+    cfg_path = tmp_path / "autoreview.yml"
+    cfg_path.write_text(
+        "org: nexpeakcore\nrepos:\n  sample-app: auto\n")
+    monkeypatch.setenv("AUTOREVIEW_CONFIG", str(cfg_path))
+    monkeypatch.setenv("DSH_SESSION_ROOT", str(tmp_path / "sessions"))
+
+    def fake_gh(args, **kw):
+        return [{"name": "sample-app"}, {"name": "admin-web"}]
+
+    monkeypatch.setattr("gh.run_gh", fake_gh)
+
+    client = TestClient(app)
+
+    r = client.get("/api/config")
+    assert r.status_code == 200
+    data = r.json()
+    assert data["org"] == "nexpeakcore"
+    by_name = {x["name"]: x["mode"] for x in data["repos"]}
+    assert by_name["sample-app"] == "auto"
+    assert by_name["admin-web"] == "unlisted"
+
+    r = client.post("/api/config/repos/sample-app/mode",
+                    json={"mode": "manual"})
+    assert r.status_code == 200
+    assert load_config(cfg_path)["repos"]["sample-app"] == "manual"
+
+    r = client.post("/api/config/repos", json={"repo": "payments"})
+    assert r.status_code == 200
+    assert load_config(cfg_path)["repos"]["payments"] == "auto"
+
+    r = client.delete("/api/config/repos/payments")
+    assert r.status_code == 200
+    assert "payments" not in load_config(cfg_path)["repos"]
+
+
+def test_api_add_repo_without_org_rejects_name(tmp_path, monkeypatch):
+    cfg_path = tmp_path / "autoreview.yml"
+    cfg_path.write_text("repos:\n  sample-app: auto\n")  # no org
+    monkeypatch.setenv("AUTOREVIEW_CONFIG", str(cfg_path))
+    client = TestClient(app)
+    r = client.post("/api/config/repos", json={"repo": "payments"})
+    assert r.status_code == 400
+    assert "org" in r.json()["detail"]
+
+
+def test_api_toggle_bad_mode_400(tmp_path, monkeypatch):
+    cfg_path = tmp_path / "autoreview.yml"
+    cfg_path.write_text("org: nexpeakcore\nrepos:\n  sample-app: auto\n")
+    monkeypatch.setenv("AUTOREVIEW_CONFIG", str(cfg_path))
+    client = TestClient(app)
+    r = client.post("/api/config/repos/sample-app/mode", json={"mode": "x"})
+    assert r.status_code == 400
+
+
+def test_api_config_missing_file_404(tmp_path, monkeypatch):
+    monkeypatch.setenv("AUTOREVIEW_CONFIG", str(tmp_path / "none.yml"))
+    client = TestClient(app)
+    assert client.get("/api/config").status_code == 404
+
+
+def test_repo_list_page_has_config_block(tmp_path, monkeypatch):
+    cfg_path = tmp_path / "autoreview.yml"
+    cfg_path.write_text("org: nexpeakcore\nrepos:\n  sample-app: auto\n")
+    monkeypatch.setenv("AUTOREVIEW_CONFIG", str(cfg_path))
+    monkeypatch.setenv("DSH_SESSION_ROOT", str(tmp_path / "sessions"))
+    monkeypatch.setattr("gh.run_gh", lambda args, **kw: [{"name": "sample-app"}])
+    client = TestClient(app)
+    r = client.get("/")
+    assert r.status_code == 200
+    assert "Repo configuration" in r.text
+    assert "sample-app" in r.text
