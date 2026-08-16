@@ -45,7 +45,7 @@ harness-pr-review/
 **`snapshot.py` (Phase 1)** — Gọi `gh api` lấy:
 - PR metadata: title, body (description), base/head branch, author, labels, danh sách commits.
 - Diff đầy đủ (`/pulls/{n}/files` hoặc `.diff`).
-- Review threads: `/pulls/{n}/comments` (inline) + `/pulls/{n}/reviews` + `/issues/{n}/comments`, kèm trạng thái resolved.
+- Review threads: GraphQL `reviewThreads` (inline comments + trạng thái resolved/outdated). Review summary bodies và discussion chung trên PR (`/pulls/{n}/reviews`, `/issues/{n}/comments`) không nằm trong snapshot (scoped down so với draft đầu — chấp nhận được).
 - Lưu vào `snapshot.json`.
 
 **`claims.py` (Phase 2)** — Gọi LLM tách PR description thành claims có cấu trúc:
@@ -70,15 +70,15 @@ harness-pr-review/
 - `report.md` (tiếng Việt): bảng verdict từng claim, trạng thái docs, tác động requirement, thread chưa resolve, log confirm.
 - Post **1 comment tiếng Anh duy nhất** lên PR (gh CLI): verdict, docs sai, action cần làm. Không spam.
 
-**`run.py`** — CLI: `python -m src.run <owner>/<repo> <pr-number> [--skip-human] [--force]`.
+**`run.py`** — CLI: `python -m src.run <owner>/<repo> <pr-number> [--skip-human] [--force] [--no-post] [--dry-run] [--fixtures DIR]`.
 - Chạy tuần tự các phase; mỗi phase kết quả lưu file riêng.
-- Phase lỗi → báo rõ, không lấp liếm, các phase khác vẫn chạy được.
+- Phase lỗi → ghi `report.md` đánh dấu `FAILED` kèm lỗi + danh sách artifact đã có, exit 1. Do các phase sau phụ thuộc cứng vào phase trước (claims cần snapshot, verify cần claims+workspace), pipeline abort thay vì chạy tiếp với dữ liệu rác.
 
 ## Nguyên tắc
 
 - Không đoán: claim không verify được → `UNVERIFIED`, đưa vào danh sách hỏi human.
 - Docs `WRONG/FABRICATED` → bắt buộc qua human gate trước khi ghi nhận.
-- Diff quá lớn (ngưỡng: > 100 files hoặc > 2MB diff) → agent làm theo từng file, không nhét toàn bộ diff vào prompt.
+- Diff luôn xử lý theo từng file (files summary vào prompt; agent đọc code thực tế trong workspace, không nhét toàn bộ diff vào prompt) — áp dụng cho mọi kích thước diff.
 - Re-run: phase đã có kết quả file → cần `--force` mới chạy lại (tiết kiệm token).
 
 ## Error Handling
