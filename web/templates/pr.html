@@ -24,10 +24,6 @@
   <div id="review-msg" class="review-msg"></div>
 </div>
 {% endif %}
-<div class="config-block review-log-panel" id="log-panel" style="display:none">
-  <h2>Review log</h2>
-  <pre id="review-log" class="review-log">loading…</pre>
-</div>
 {% else %}
 <h1>PR #{{ detail.pr.pr }} — {{ detail.title }}
   <a class="gh-link" target="_blank" rel="noopener"
@@ -132,6 +128,11 @@
 </div>
 {% endif %}
 
+<div class="config-block review-log-panel" id="log-panel" style="display:none">
+  <h2>Review log</h2>
+  <pre id="review-log" class="review-log">loading…</pre>
+</div>
+
 <script>
 function showTab(id, btn) {
   document.querySelectorAll(".tab-panel").forEach(p => p.style.display = "none");
@@ -174,9 +175,8 @@ async function triggerReview(pr, btn) {
   }
 }
 
-{% if not_reviewed %}
 (function() {
-  const pr = {{ pr_info.pr }};
+  const pr = {% if not_reviewed %}{{ pr_info.pr }}{% else %}{{ detail.pr.pr }}{% endif %};
   const pre = document.getElementById("review-log");
   const panel = document.getElementById("log-panel");
   let timer;
@@ -196,6 +196,5 @@ async function triggerReview(pr, btn) {
   }
   refresh();
 })();
-{% endif %}
 </script>
 {% endblock %}
