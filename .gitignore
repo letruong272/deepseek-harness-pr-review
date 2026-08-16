@@ -2,7 +2,9 @@
 __pycache__/
 *.pyc
 .env
-sessions/
+sessions/*
+!sessions/demo/
+!sessions/demo/**
 .pytest_cache/
 dist/
 *.egg-info/

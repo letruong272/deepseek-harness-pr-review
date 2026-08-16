@@ -59,6 +59,10 @@ DSH_SESSION_ROOT=sessions python -m web.server
 Pages: repo list → repo detail (KPIs + verdict donut + PR table) → PR detail
 (tabs: Claims / Docs / Impact / Threads / Confirm).
 
+**Demo data** is checked into `sessions/demo/app/` — start the server and open
+http://127.0.0.1:8000/repos/demo/app/pr/7 for a sample review (PR #8 shows a
+MISLEADING verdict + FABRICATED doc), useful for screenshots and documentation.
+
 ## Auto review
 
 Poll GitHub for new PRs (and head-SHA changes) on configured repos and review
