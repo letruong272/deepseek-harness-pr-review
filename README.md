@@ -45,6 +45,20 @@ Results land in `sessions/<owner>/<repo>/pr-<n>/report.md` (change the directory
 python -m pytest -v
 ```
 
+## Web dashboard
+
+Read-only dashboard for review metrics (PRs reviewed, bugs, doc errors, verdicts
+per repo). Reads `sessions/` directly — no database.
+
+```bash
+pip install -e '.[web]'
+DSH_SESSION_ROOT=sessions python -m web.server
+# open http://127.0.0.1:8000
+```
+
+Pages: repo list → repo detail (KPIs + verdict donut + PR table) → PR detail
+(tabs: Claims / Docs / Impact / Threads / Confirm).
+
 ## Configuration
 
 | Env | Default | Meaning |
