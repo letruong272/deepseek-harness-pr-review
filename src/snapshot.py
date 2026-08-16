@@ -1,5 +1,6 @@
 """Phase 1: fetch PR metadata, files, commits, review threads từ GitHub."""
 import json
+import sys
 from pathlib import Path
 
 from gh import run_gh as _default_gh
@@ -30,10 +31,23 @@ def _get_threads(owner: str, repo: str, n: int, gh) -> list[dict]:
     """
     payload = gh(["api", "graphql", "-f", f"query={query}",
                   "-F", f"owner={owner}", "-F", f"repo={repo}", "-F", f"pr={n}"])
-    nodes = payload["data"]["repository"]["pullRequest"]["reviewThreads"]["nodes"]
+    if not isinstance(payload, dict):
+        raise RuntimeError(f"graphql failed: {payload}")
+    if "errors" in payload:
+        raise RuntimeError(f"graphql errors: {payload['errors']}")
+    if "data" not in payload:
+        raise RuntimeError(f"graphql failed: {payload}")
+    pr = (payload["data"] or {}).get("repository", {}).get("pullRequest")
+    if pr is None:
+        raise RuntimeError(f"graphql: pullRequest #{n} not found (owner={owner}, repo={repo})")
+    nodes = (pr.get("reviewThreads") or {}).get("nodes") or []
     threads = []
+    truncated = len(nodes) == 100
     for node in nodes:
-        for c in node["comments"]["nodes"]:
+        comments = (node.get("comments") or {}).get("nodes") or []
+        if len(comments) == 100:
+            truncated = True
+        for c in comments:
             threads.append({
                 "path": c.get("path"),
                 "line": c.get("line"),
@@ -42,6 +56,8 @@ def _get_threads(owner: str, repo: str, n: int, gh) -> list[dict]:
                 "resolved": node["isResolved"],
                 "outdated": node["isOutdated"],
             })
+    if truncated:
+        print("[snapshot] warning: review threads truncated at 100 — dữ liệu snapshot thiếu", file=sys.stderr)
     return threads
 
 
