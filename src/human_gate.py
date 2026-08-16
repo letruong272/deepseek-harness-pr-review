@@ -15,7 +15,8 @@ def _collect_questions(findings: dict) -> list[tuple[str, str]]:
     questions: list[tuple[str, str]] = []
     for d in findings.get("docs", []):
         if d["status"] in ("WRONG", "FABRICATED"):
-            q = trim_question(f"Doc {d['path']}: {d['what']}. Doc sai, phải không?")
+            q = trim_question(
+                f"Doc {d.get('path', '?')}: {d.get('what', '')}. Doc sai, phải không?")
             questions.append((q, "doc"))
     for c in findings.get("claims", []):
         if c["status"] == "UNVERIFIED":

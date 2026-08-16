@@ -21,13 +21,18 @@ def test_run_gate_writes_answers(tmp_path, monkeypatch):
         "docs": [{"path": "docs/a.md", "status": "WRONG",
                   "what": "doc nói X, code làm Y"}],
         "impact": [], "threads": [],
-        "unresolved_questions": ["Doc A đúng không?"],
+        "unresolved_questions": ["Doc A đúng, phải không?"],
     }
     monkeypatch.setattr("builtins.input",
-                        lambda prompt: "y" if "sai doc" in prompt or "Doc A" in prompt else "n")
+                        lambda prompt: "y" if "phải không" in prompt else "n")
     session_dir = tmp_path / "s"
     answers = run_gate(findings, session_dir)
     assert len(answers) == 3
-    assert all(a["answer"] for a in answers)
+    kinds = [a["kind"] for a in answers]
+    assert kinds == ["doc", "claim", "free"]
+    assert answers[0]["answer"] == "y"
+    assert answers[1]["answer"] == "n"
+    assert answers[2]["answer"] == "y"
     saved = json.loads((session_dir / "answers.json").read_text())
     assert len(saved) == 3
+    assert all(set(a.keys()) == {"question", "kind", "answer"} for a in saved)
