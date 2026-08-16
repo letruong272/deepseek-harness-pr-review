@@ -1,4 +1,4 @@
-org: nexpeakcore
+org: sample-org
 default_mode: manual
 interval_minutes: 2
 post_comment: true
@@ -6,4 +6,4 @@ skip_human: true
 drafts: false
 skip_bots: true
 repos:
-  deepseek-harness-pr-review: auto
+  nexpeakcore/deepseek-harness-pr-review: auto
