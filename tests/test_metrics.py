@@ -30,12 +30,12 @@ def test_list_repos_empty(tmp_path):
 
 
 def test_list_repos_finds_pairs(tmp_path):
-    _write_session(tmp_path, "nexpeakcore", "sample-app", 7,
+    _write_session(tmp_path, "sample-org", "sample-app", 7,
                    snapshot=SNAPSHOT, findings=EMPTY_FINDINGS)
-    _write_session(tmp_path, "nexpeakcore", "sample-api", 3,
+    _write_session(tmp_path, "sample-org", "sample-api", 3,
                    snapshot=SNAPSHOT, findings=EMPTY_FINDINGS)
-    assert metrics.list_repos(tmp_path) == [("nexpeakcore", "sample-api"),
-                                            ("nexpeakcore", "sample-app")]
+    assert metrics.list_repos(tmp_path) == [("sample-org", "sample-api"),
+                                            ("sample-org", "sample-app")]
 
 
 def test_pr_record_counts(tmp_path):

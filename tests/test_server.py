@@ -32,7 +32,7 @@ def _write_session(root, owner, repo, pr, snapshot=None, findings=None,
 @pytest.fixture
 def client(tmp_path, monkeypatch):
     monkeypatch.setenv("DSH_SESSION_ROOT", str(tmp_path))
-    _write_session(tmp_path, "nexpeakcore", "sample-app", 77,
+    _write_session(tmp_path, "sample-org", "sample-app", 77,
                    snapshot={**SNAPSHOT, "pr": 77, "title": "Google sign-in"},
                    findings={
                        "claims": [{"id": "C1", "status": "PASS",
@@ -93,7 +93,7 @@ def test_unknown_pr_404(client):
 def test_api_config_and_toggle(tmp_path, monkeypatch):
     cfg_path = tmp_path / "autoreview.yml"
     cfg_path.write_text(
-        "org: nexpeakcore\nrepos:\n  sample-app: auto\n")
+        "org: sample-org\nrepos:\n  sample-app: auto\n")
     monkeypatch.setenv("AUTOREVIEW_CONFIG", str(cfg_path))
     monkeypatch.setenv("DSH_SESSION_ROOT", str(tmp_path / "sessions"))
 
@@ -107,7 +107,7 @@ def test_api_config_and_toggle(tmp_path, monkeypatch):
     r = client.get("/api/config")
     assert r.status_code == 200
     data = r.json()
-    assert data["org"] == "nexpeakcore"
+    assert data["org"] == "sample-org"
     by_name = {x["name"]: x["mode"] for x in data["repos"]}
     assert by_name["sample-app"] == "auto"
     assert by_name["admin-web"] == "unlisted"
@@ -138,7 +138,7 @@ def test_api_add_repo_without_org_rejects_name(tmp_path, monkeypatch):
 
 def test_api_toggle_bad_mode_400(tmp_path, monkeypatch):
     cfg_path = tmp_path / "autoreview.yml"
-    cfg_path.write_text("org: nexpeakcore\nrepos:\n  sample-app: auto\n")
+    cfg_path.write_text("org: sample-org\nrepos:\n  sample-app: auto\n")
     monkeypatch.setenv("AUTOREVIEW_CONFIG", str(cfg_path))
     client = TestClient(app)
     r = client.post("/api/config/repos/sample-app/mode", json={"mode": "x"})
@@ -153,7 +153,7 @@ def test_api_config_missing_file_404(tmp_path, monkeypatch):
 
 def test_config_page_has_config_block(tmp_path, monkeypatch):
     cfg_path = tmp_path / "autoreview.yml"
-    cfg_path.write_text("org: nexpeakcore\nrepos:\n  sample-app: auto\n")
+    cfg_path.write_text("org: sample-org\nrepos:\n  sample-app: auto\n")
     monkeypatch.setenv("AUTOREVIEW_CONFIG", str(cfg_path))
     monkeypatch.setenv("DSH_SESSION_ROOT", str(tmp_path / "sessions"))
     monkeypatch.setattr("gh.run_gh", lambda args, **kw: [{"name": "sample-app"}])
@@ -166,7 +166,7 @@ def test_config_page_has_config_block(tmp_path, monkeypatch):
 
 def test_repo_list_page_has_no_config_block(tmp_path, monkeypatch):
     cfg_path = tmp_path / "autoreview.yml"
-    cfg_path.write_text("org: nexpeakcore\nrepos:\n  sample-app: auto\n")
+    cfg_path.write_text("org: sample-org\nrepos:\n  sample-app: auto\n")
     monkeypatch.setenv("AUTOREVIEW_CONFIG", str(cfg_path))
     monkeypatch.setenv("DSH_SESSION_ROOT", str(tmp_path / "sessions"))
     monkeypatch.setattr("gh.run_gh", lambda args, **kw: [{"name": "sample-app"}])
@@ -205,7 +205,7 @@ def test_repo_page_gh_failure_badge(client, tmp_path, monkeypatch):
 def test_trigger_review_ok(tmp_path, monkeypatch):
     monkeypatch.setenv("DEEPSEEK_API_KEY", "sk-test")
     cfg_path = tmp_path / "autoreview.yml"
-    cfg_path.write_text("org: nexpeakcore\nrepos:\n  sample-app: auto\n")
+    cfg_path.write_text("org: sample-org\nrepos:\n  sample-app: auto\n")
     monkeypatch.setenv("AUTOREVIEW_CONFIG", str(cfg_path))
     monkeypatch.setenv("DSH_SESSION_ROOT", str(tmp_path / "sessions"))
     calls = []
@@ -230,7 +230,7 @@ def test_trigger_review_no_post_config(tmp_path, monkeypatch):
     monkeypatch.setenv("DEEPSEEK_API_KEY", "sk-test")
     monkeypatch.setenv("DSH_SESSION_ROOT", str(tmp_path / "sessions"))
     cfg_path = tmp_path / "autoreview.yml"
-    cfg_path.write_text("org: nexpeakcore\nrepos:\n  sample-app: auto\n"
+    cfg_path.write_text("org: sample-org\nrepos:\n  sample-app: auto\n"
                         "post_comment: false\nskip_human: false\n")
     monkeypatch.setenv("AUTOREVIEW_CONFIG", str(cfg_path))
     calls = []
@@ -250,7 +250,7 @@ def test_trigger_review_no_post_config(tmp_path, monkeypatch):
 def test_trigger_review_missing_key(tmp_path, monkeypatch):
     monkeypatch.delenv("DEEPSEEK_API_KEY", raising=False)
     cfg_path = tmp_path / "autoreview.yml"
-    cfg_path.write_text("org: nexpeakcore\nrepos:\n  sample-app: auto\n")
+    cfg_path.write_text("org: sample-org\nrepos:\n  sample-app: auto\n")
     monkeypatch.setenv("AUTOREVIEW_CONFIG", str(cfg_path))
     monkeypatch.setattr("web.server.run_main", lambda argv: 3)  # thiếu API key
     client = TestClient(app)
@@ -263,7 +263,7 @@ def test_trigger_review_error_500(tmp_path, monkeypatch):
     monkeypatch.setenv("DEEPSEEK_API_KEY", "sk-test")
     monkeypatch.setenv("DSH_SESSION_ROOT", str(tmp_path / "sessions"))
     cfg_path = tmp_path / "autoreview.yml"
-    cfg_path.write_text("org: nexpeakcore\nrepos:\n  sample-app: auto\n")
+    cfg_path.write_text("org: sample-org\nrepos:\n  sample-app: auto\n")
     monkeypatch.setenv("AUTOREVIEW_CONFIG", str(cfg_path))
     monkeypatch.setattr("web.server.run_main", lambda argv: 2)  # gh lỗi
     client = TestClient(app)
@@ -276,11 +276,11 @@ def test_trigger_review_concurrent_409(tmp_path, monkeypatch):
     monkeypatch.setenv("DEEPSEEK_API_KEY", "sk-test")
     monkeypatch.setenv("DSH_SESSION_ROOT", str(tmp_path / "sessions"))
     cfg_path = tmp_path / "autoreview.yml"
-    cfg_path.write_text("org: nexpeakcore\nrepos:\n  sample-app: auto\n")
+    cfg_path.write_text("org: sample-org\nrepos:\n  sample-app: auto\n")
     monkeypatch.setenv("AUTOREVIEW_CONFIG", str(cfg_path))
     monkeypatch.setenv("DSH_SESSION_ROOT", str(tmp_path / "sessions"))
     monkeypatch.setattr("web.server.run_main", lambda argv: 0)
-    lock = tmp_path / "sessions" / "nexpeakcore" / "sample-app" / "pr-78" \
+    lock = tmp_path / "sessions" / "sample-org" / "sample-app" / "pr-78" \
         / "review.lock"
     lock.parent.mkdir(parents=True)
     lock.write_text(json.dumps({"pid": os.getpid(), "started_at": "2026-08-16T10:00:00"}))
@@ -293,7 +293,7 @@ def test_trigger_review_concurrent_409(tmp_path, monkeypatch):
 
 def test_review_status_api_running(tmp_path, monkeypatch):
     monkeypatch.setenv("DSH_SESSION_ROOT", str(tmp_path / "sessions"))
-    lock = tmp_path / "sessions" / "nexpeakcore" / "sample-app" / "pr-78" \
+    lock = tmp_path / "sessions" / "sample-org" / "sample-app" / "pr-78" \
         / "review.lock"
     lock.parent.mkdir(parents=True)
     lock.write_text(json.dumps({"pid": os.getpid(), "started_at": "2026-08-16T10:00:00"}))
@@ -307,7 +307,7 @@ def test_review_status_api_running(tmp_path, monkeypatch):
 
 def test_review_status_api_stale(tmp_path, monkeypatch):
     monkeypatch.setenv("DSH_SESSION_ROOT", str(tmp_path / "sessions"))
-    lock = tmp_path / "sessions" / "nexpeakcore" / "sample-app" / "pr-78" \
+    lock = tmp_path / "sessions" / "sample-org" / "sample-app" / "pr-78" \
         / "review.lock"
     lock.parent.mkdir(parents=True)
     lock.write_text(json.dumps({"pid": 999999, "started_at": "2026-08-16T10:00:00"}))
@@ -320,7 +320,7 @@ def test_review_status_api_stale(tmp_path, monkeypatch):
 
 def test_review_log_api(tmp_path, monkeypatch):
     monkeypatch.setenv("DSH_SESSION_ROOT", str(tmp_path / "sessions"))
-    session_dir = tmp_path / "sessions" / "nexpeakcore" / "sample-app" / "pr-78"
+    session_dir = tmp_path / "sessions" / "sample-org" / "sample-app" / "pr-78"
     session_dir.mkdir(parents=True)
     (session_dir / "review.log").write_text("line1\nline2\nline3\n")
     client = TestClient(app)
@@ -351,7 +351,7 @@ def test_repo_page_has_review_buttons(client, monkeypatch):
 
 def test_repo_list_shows_auto_repos_without_data(tmp_path, monkeypatch):
     cfg_path = tmp_path / "autoreview.yml"
-    cfg_path.write_text("org: nexpeakcore\nrepos:\n  sample-app: auto\n")
+    cfg_path.write_text("org: sample-org\nrepos:\n  sample-app: auto\n")
     monkeypatch.setenv("AUTOREVIEW_CONFIG", str(cfg_path))
     monkeypatch.setenv("DSH_SESSION_ROOT", str(tmp_path / "sessions"))
     client = TestClient(app)

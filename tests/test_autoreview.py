@@ -87,7 +87,7 @@ def test_run_pass_skips_manual(tmp_path, monkeypatch):
     root.mkdir(parents=True)
     cfg_path = tmp_path / "autoreview.yml"
     cfg_path.write_text(
-        "org: nexpeakcore\nrepos:\n  sample-app: manual\n  sample-api: auto\n")
+        "org: sample-org\nrepos:\n  sample-app: manual\n  sample-api: auto\n")
     cfg = load_config(cfg_path)
 
     prs_by_repo = {
@@ -104,12 +104,12 @@ def test_run_pass_skips_manual(tmp_path, monkeypatch):
                         lambda c, o, r, n, sha: (dispatched.append((o, r, n)) or 0))
     count = run_pass(cfg, root, dry_run=False, gh=fake_gh)
     assert count == 1
-    assert dispatched == [("nexpeakcore", "sample-api", 1)]
+    assert dispatched == [("sample-org", "sample-api", 1)]
 
 
 def test_main_add_repo_writes_config(tmp_path, monkeypatch):
     cfg_path = tmp_path / "autoreview.yml"
-    cfg_path.write_text("org: nexpeakcore\nrepos:\n  sample-app: manual\n")
+    cfg_path.write_text("org: sample-org\nrepos:\n  sample-app: manual\n")
     monkeypatch.setattr("autoreview.CONFIG_PATH", cfg_path)
     code = main(["--add-repo", "admin-web", "--mode", "auto"])
     assert code == 0
@@ -120,7 +120,7 @@ def test_main_add_repo_writes_config(tmp_path, monkeypatch):
 
 def test_main_rm_repo(tmp_path, monkeypatch):
     cfg_path = tmp_path / "autoreview.yml"
-    cfg_path.write_text("org: nexpeakcore\nrepos:\n  sample-app: auto\n")
+    cfg_path.write_text("org: sample-org\nrepos:\n  sample-app: auto\n")
     monkeypatch.setattr("autoreview.CONFIG_PATH", cfg_path)
     code = main(["--rm-repo", "sample-app"])
     assert code == 0
@@ -141,9 +141,9 @@ def test_run_pass_skips_manual_review_lock(tmp_path, monkeypatch, capsys):
     root = tmp_path / "sessions"
     root.mkdir(parents=True)
     cfg_path = tmp_path / "autoreview.yml"
-    cfg_path.write_text("org: nexpeakcore\nrepos:\n  sample-api: auto\n")
+    cfg_path.write_text("org: sample-org\nrepos:\n  sample-api: auto\n")
     cfg = load_config(cfg_path)
-    lock = root / "nexpeakcore" / "sample-api" / "pr-1" / "review.lock"
+    lock = root / "sample-org" / "sample-api" / "pr-1" / "review.lock"
     lock.parent.mkdir(parents=True)
     lock.touch()
 

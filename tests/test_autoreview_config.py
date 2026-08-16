@@ -5,7 +5,7 @@ from autoreview_config import (auto_repos, list_repos, load_config,
                                remove_repo, set_repo_mode)
 
 NEW_YML = """
-org: nexpeakcore
+org: sample-org
 default_mode: manual
 interval_minutes: 2
 post_comment: true
@@ -24,7 +24,7 @@ def _write(path, text):
 
 def test_load_config_new_format(tmp_path):
     cfg = load_config(_write(tmp_path / "a.yml", NEW_YML))
-    assert cfg["org"] == "nexpeakcore"
+    assert cfg["org"] == "sample-org"
     assert cfg["default_mode"] == "manual"
     assert cfg["repos"] == {"sample-app": "auto", "sample-api": "auto"}
     assert cfg["interval_minutes"] == 2
@@ -37,7 +37,7 @@ def test_load_config_legacy_list(tmp_path):
 
 
 def test_load_config_empty_repos_allowed(tmp_path):
-    cfg = load_config(_write(tmp_path / "a.yml", "org: nexpeakcore\n"))
+    cfg = load_config(_write(tmp_path / "a.yml", "org: sample-org\n"))
     assert cfg["repos"] == {}
     assert cfg["default_mode"] == "manual"
 
@@ -59,7 +59,7 @@ def test_load_config_bad_yaml(tmp_path):
 
 
 def test_set_repo_mode_add_and_change(tmp_path):
-    p = _write(tmp_path / "a.yml", "org: nexpeakcore\nrepos:\n  sample-app: manual\n")
+    p = _write(tmp_path / "a.yml", "org: sample-org\nrepos:\n  sample-app: manual\n")
     set_repo_mode(p, "admin-web", "auto")          # add by name
     cfg = load_config(p)
     assert cfg["repos"]["admin-web"] == "auto"
@@ -68,7 +68,7 @@ def test_set_repo_mode_add_and_change(tmp_path):
 
 
 def test_set_repo_mode_invalid(tmp_path):
-    p = _write(tmp_path / "a.yml", "org: nexpeakcore\n")
+    p = _write(tmp_path / "a.yml", "org: sample-org\n")
     with pytest.raises(ValueError, match="mode must be auto|manual"):
         set_repo_mode(p, "sample-app", "banana")
 
@@ -83,8 +83,8 @@ def test_remove_repo(tmp_path):
 
 def test_auto_repos_resolves_org(tmp_path):
     cfg = load_config(_write(tmp_path / "a.yml", NEW_YML))
-    assert auto_repos(cfg) == [("nexpeakcore", "sample-app"),
-                               ("nexpeakcore", "sample-api")]
+    assert auto_repos(cfg) == [("sample-org", "sample-app"),
+                               ("sample-org", "sample-api")]
 
 
 def test_auto_repos_full_path(tmp_path):
