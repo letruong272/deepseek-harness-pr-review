@@ -1,7 +1,8 @@
 # tests/test_autoreview.py
 import json
 
-from autoreview import decide_pr, plan_reviews
+from autoreview import decide_pr, main, plan_reviews, run_pass
+from autoreview_config import load_config
 
 EMPTY_FINDINGS = {"claims": [], "docs": [], "impact": [], "threads": [],
                   "unresolved_questions": []}
@@ -75,3 +76,58 @@ def test_plan_reviews_statuses(tmp_path):
         {"pr": 2, "head_sha": "c", "decision": "NEW"},
         {"pr": 3, "head_sha": "b", "decision": "RE-RUN"},
     ]
+
+
+def test_run_pass_skips_manual(tmp_path, monkeypatch):
+    root = tmp_path / "sessions"
+    root.mkdir(parents=True)
+    cfg_path = tmp_path / "autoreview.yml"
+    cfg_path.write_text(
+        "org: nexpeakcore\nrepos:\n  sample-app: manual\n  sample-api: auto\n")
+    cfg = load_config(cfg_path)
+
+    prs_by_repo = {
+        "sample-org/sample-api": [{"number": 1, "head": {"sha": "a"},
+                                     "draft": False}],
+    }
+
+    def fake_gh(args, **kw):
+        repo_ref = args[1].split("?")[0].split("repos/")[1].removesuffix("/pulls")
+        return prs_by_repo[repo_ref]
+
+    dispatched = []
+    monkeypatch.setattr("autoreview._dispatch",
+                        lambda c, o, r, n, sha: (dispatched.append((o, r, n)) or 0))
+    count = run_pass(cfg, root, dry_run=False, gh=fake_gh)
+    assert count == 1
+    assert dispatched == [("nexpeakcore", "sample-api", 1)]
+
+
+def test_main_add_repo_writes_config(tmp_path, monkeypatch):
+    cfg_path = tmp_path / "autoreview.yml"
+    cfg_path.write_text("org: nexpeakcore\nrepos:\n  sample-app: manual\n")
+    monkeypatch.setattr("autoreview.CONFIG_PATH", cfg_path)
+    code = main(["--add-repo", "admin-web", "--mode", "auto"])
+    assert code == 0
+    cfg = load_config(cfg_path)
+    assert cfg["repos"]["admin-web"] == "auto"
+    assert cfg["repos"]["sample-app"] == "manual"
+
+
+def test_main_rm_repo(tmp_path, monkeypatch):
+    cfg_path = tmp_path / "autoreview.yml"
+    cfg_path.write_text("org: nexpeakcore\nrepos:\n  sample-app: auto\n")
+    monkeypatch.setattr("autoreview.CONFIG_PATH", cfg_path)
+    code = main(["--rm-repo", "sample-app"])
+    assert code == 0
+    assert load_config(cfg_path)["repos"] == {}
+
+
+def test_main_repos_lists_status(tmp_path, monkeypatch, capsys):
+    cfg_path = tmp_path / "autoreview.yml"
+    cfg_path.write_text("repos:\n  sample-app: auto\n")
+    monkeypatch.setattr("autoreview.CONFIG_PATH", cfg_path)
+    code = main(["--repos"])
+    assert code == 0
+    out = capsys.readouterr().out
+    assert "sample-app" in out and "auto" in out

@@ -1,6 +1,8 @@
-repos:
-  - sample-org/sample-app
+org: nexpeakcore
+default_mode: manual
 interval_minutes: 10
 post_comment: true
 skip_human: true
 drafts: false
+repos:
+  sample-app: auto

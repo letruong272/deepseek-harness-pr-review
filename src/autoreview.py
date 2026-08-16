@@ -12,7 +12,8 @@ import sys
 import time
 from pathlib import Path
 
-from autoreview_config import load_config
+from autoreview_config import auto_repos, list_repos, load_config, \
+    remove_repo, set_repo_mode
 from config import load_config as load_env_config
 from gh import gh_available, run_gh
 
@@ -93,10 +94,9 @@ def _dispatch(cfg: dict, owner: str, repo: str, n: int,
 
 def run_pass(cfg: dict, session_root: Path, dry_run: bool = False,
              gh=run_gh) -> int:
-    """One poll pass over all configured repos. Returns count of dispatched."""
+    """One poll pass over all auto repos. Returns count of dispatched."""
     dispatched = 0
-    for repo_ref in cfg["repos"]:
-        owner, repo = repo_ref.split("/")
+    for owner, repo in auto_repos(cfg):
         try:
             prs = fetch_open_prs(owner, repo, gh=gh)
         except RuntimeError as e:
@@ -138,7 +138,27 @@ def main(argv: list[str] | None = None) -> int:
                         help="print plans without dispatching")
     parser.add_argument("--config", type=Path, default=CONFIG_PATH,
                         help="path to autoreview.yml")
+    parser.add_argument("--add-repo", metavar="REPO",
+                        help="add repo (name or owner/name) and set its mode")
+    parser.add_argument("--rm-repo", metavar="REPO", help="remove a repo")
+    parser.add_argument("--mode", choices=["auto", "manual"], default="auto",
+                        help="mode for --add-repo (default: auto)")
+    parser.add_argument("--repos", action="store_true",
+                        help="list configured + org repos with modes")
     args = parser.parse_args(argv)
+
+    if args.add_repo:
+        set_repo_mode(args.config, args.add_repo, args.mode)
+        print(f"{args.add_repo} -> {args.mode}")
+        return 0
+    if args.rm_repo:
+        remove_repo(args.config, args.rm_repo)
+        print(f"removed {args.rm_repo}")
+        return 0
+    if args.repos:
+        for r in list_repos(args.config):
+            print(f"{r['name']:<40} {r['mode']}")
+        return 0
 
     cfg = load_config(args.config)
     env = load_env_config()
