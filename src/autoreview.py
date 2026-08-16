@@ -12,10 +12,10 @@ import sys
 import time
 from pathlib import Path
 
-from autoreview_config import auto_repos, list_repos, load_config, \
+from src.autoreview_config import auto_repos, list_repos, load_config, \
     remove_repo, set_repo_mode
-from config import load_config as load_env_config
-from gh import gh_available, run_gh
+from src.config import load_config as load_env_config
+from src.gh import gh_available, run_gh
 
 CONFIG_PATH = Path("autoreview.yml")
 LOCK_PATH = Path("autoreview.lock")
@@ -113,7 +113,7 @@ def _clean_rerun_session(session_dir: Path) -> None:
 def _dispatch(cfg: dict, owner: str, repo: str, n: int,
               head_sha: str) -> int:
     """Chạy pipeline cho 1 PR. Trả về exit code."""
-    from run import main
+    from src.run import main
 
     args = [f"{owner}/{repo}", str(n), "--force"]
     if cfg.get("skip_human", True):
@@ -183,7 +183,7 @@ def main(argv: list[str] | None = None) -> int:
     args = parser.parse_args(argv)
 
     if args.add_repo:
-        from repo_ref import parse_repo
+        from src.repo_ref import parse_repo
 
         raw = args.add_repo.strip()
         try:

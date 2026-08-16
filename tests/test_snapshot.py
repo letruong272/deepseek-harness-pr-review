@@ -2,7 +2,7 @@ import json
 
 import pytest
 
-from snapshot import build_snapshot
+from src.snapshot import build_snapshot
 
 
 def _gh_fake(registry):

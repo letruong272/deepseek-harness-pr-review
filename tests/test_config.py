@@ -2,7 +2,7 @@ import os
 
 import pytest
 
-from config import load_config
+from src.config import load_config
 
 
 def test_load_config_defaults(monkeypatch):

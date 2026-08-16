@@ -2,7 +2,7 @@ import json
 
 import pytest
 
-from claims import extract_claims
+from src.claims import extract_claims
 
 
 FIXTURE_RESPONSE = """```json

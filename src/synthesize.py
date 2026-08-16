@@ -1,7 +1,7 @@
 """Phase 5: synthesize the report + post an English comment on the PR."""
 from pathlib import Path
 
-from gh import run_gh
+from src.gh import run_gh
 
 MARKER = "<!-- harness-pr-review -->"
 STATUS_LABELS = {"PASS": "Matches", "FAIL": "Mismatch", "PARTIAL": "Partial",

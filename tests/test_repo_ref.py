@@ -1,7 +1,7 @@
 # tests/test_repo_ref.py
 import pytest
 
-from repo_ref import parse_pr, parse_repo
+from src.repo_ref import parse_pr, parse_repo
 
 
 def test_parse_repo_url_full():

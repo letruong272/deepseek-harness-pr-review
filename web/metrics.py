@@ -4,7 +4,7 @@ import sys
 from datetime import datetime
 from pathlib import Path
 
-from synthesize import _overall_verdict
+from src.synthesize import _overall_verdict
 
 VERDICTS = ("ACCURATE", "PARTIAL", "MISLEADING", "NO_CLAIMS")
 REQUIRED_FILES = ("snapshot.json", "findings.json")
@@ -200,7 +200,7 @@ def open_prs(session_root: Path, owner: str, repo: str, gh=None) -> list[dict]:
     gh failure → rows for reviewed sessions only, unavailable=True.
     """
     if gh is None:
-        from gh import run_gh
+        from src.gh import run_gh
         gh = run_gh
     rows = []
     unavailable = False

@@ -47,12 +47,25 @@ status. Live demo data is included — see [Web dashboard](#web-dashboard).
 
 Requirements: Python 3.10+ (recommended 3.11), `gh` CLI already authenticated.
 
+**Quick install (from GitHub, no clone needed):**
+
+```bash
+pip install git+https://github.com/nexpeakcore/deepseek-harness-pr-review.git
+```
+
+**Or clone for development:**
+
 ```bash
 python -m venv .venv && . .venv/bin/activate
 pip install -e '.[dev]'   # zsh needs quotes; SDK comes from PyPI (deepseek-harness-sdk)
+```
+
+Then authenticate:
+
+```bash
 gh auth login          # required
 export DEEPSEEK_API_KEY=sk-...   # see .env.example
-```
+harness-pr-review doctor         # verify everything is ready
 
 ## Usage
 

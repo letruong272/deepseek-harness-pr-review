@@ -1,4 +1,4 @@
-from synthesize import _overall_verdict, build_comment, build_report, post_comment
+from src.synthesize import _overall_verdict, build_comment, build_report, post_comment
 
 SNAPSHOT = {
     "owner": "demo", "repo": "app", "pr": 7,

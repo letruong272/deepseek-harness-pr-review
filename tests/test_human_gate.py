@@ -2,7 +2,7 @@ import json
 
 import pytest
 
-from human_gate import run_gate, trim_question
+from src.human_gate import run_gate, trim_question
 
 
 def test_trim_question_limits_words():

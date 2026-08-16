@@ -9,10 +9,10 @@ from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
-from autoreview_config import load_config as load_autoreview_config
-from autoreview_config import auto_repos, list_repos, remove_repo, set_repo_mode
-from config import load_config
-from run import main as run_main
+from src.autoreview_config import load_config as load_autoreview_config
+from src.autoreview_config import auto_repos, list_repos, remove_repo, set_repo_mode
+from src.config import load_config
+from src.run import main as run_main
 from web import metrics
 
 BASE = Path(__file__).resolve().parent
@@ -90,7 +90,7 @@ def repo_page(request: Request, owner: str, repo: str):
         raise HTTPException(status_code=404, detail="Repo not found in sessions")
     verdict_json = json.dumps(rec["verdict_count"])
     open_qs = sum(p["open_questions"] for p in rec["prs"])
-    from gh import run_gh
+    from src.gh import run_gh
 
     pr_rows = metrics.open_prs(_session_root(), owner, repo, gh=run_gh)
     return templates.TemplateResponse(
@@ -104,7 +104,7 @@ def pr_page(request: Request, owner: str, repo: str, pr: int):
     detail = metrics.pr_detail(_session_root(), owner, repo, pr)
     if detail is None:
         # PR chưa review → hiện placeholder + nút Review now (title từ gh)
-        from gh import run_gh
+        from src.gh import run_gh
 
         try:
             meta = run_gh(["api", f"repos/{owner}/{repo}/pulls/{pr}"])

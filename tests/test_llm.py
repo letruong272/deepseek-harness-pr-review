@@ -4,7 +4,7 @@ from http.server import BaseHTTPRequestHandler, HTTPServer
 
 import pytest
 
-from llm import chat
+from src.llm import chat
 
 
 class _Handler(BaseHTTPRequestHandler):

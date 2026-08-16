@@ -1,6 +1,6 @@
 import json
 
-from run import main
+from src.run import main
 
 FIXTURES = {
     "snapshot.json": {
@@ -32,7 +32,7 @@ def test_main_fixtures_mode(tmp_path, monkeypatch):
 
 def test_main_requires_gh(tmp_path, monkeypatch):
     monkeypatch.setenv("DEEPSEEK_API_KEY", "sk-test")
-    monkeypatch.setattr("run.gh_available", lambda: False)
+    monkeypatch.setattr("src.run.gh_available", lambda: False)
     code = main(["demo/app", "7", "--no-post"])
     assert code == 2
 
@@ -51,7 +51,7 @@ def test_main_owner_repo_hash_parsing(tmp_path, monkeypatch):
 def test_rerun_skips_verify(tmp_path, monkeypatch):
     monkeypatch.setenv("DEEPSEEK_API_KEY", "sk-test")
     monkeypatch.setenv("DSH_SESSION_ROOT", str(tmp_path / "sessions"))
-    monkeypatch.setattr("run.gh_available", lambda: True)
+    monkeypatch.setattr("src.run.gh_available", lambda: True)
     monkeypatch.setattr("builtins.input", lambda prompt: "n")
 
     calls = {"verify": 0}
@@ -80,10 +80,10 @@ def test_rerun_skips_verify(tmp_path, monkeypatch):
         calls["verify"] += 1
         return fake_findings
 
-    monkeypatch.setattr("snapshot.build_snapshot", fake_build_snapshot)
-    monkeypatch.setattr("claims.extract_claims", fake_extract_claims)
-    monkeypatch.setattr("run.setup_workspace", fake_setup_workspace)
-    monkeypatch.setattr("run.run_verify", fake_run_verify)
+    monkeypatch.setattr("src.snapshot.build_snapshot", fake_build_snapshot)
+    monkeypatch.setattr("src.claims.extract_claims", fake_extract_claims)
+    monkeypatch.setattr("src.run.setup_workspace", fake_setup_workspace)
+    monkeypatch.setattr("src.run.run_verify", fake_run_verify)
 
     code1 = main(["demo/app", "7", "--no-post"])
     assert code1 == 0
@@ -100,7 +100,7 @@ def test_rerun_skips_verify(tmp_path, monkeypatch):
 def test_verify_run_bumps_rounds(tmp_path, monkeypatch):
     monkeypatch.setenv("DEEPSEEK_API_KEY", "sk-test")
     monkeypatch.setenv("DSH_SESSION_ROOT", str(tmp_path / "sessions"))
-    monkeypatch.setattr("run.gh_available", lambda: True)
+    monkeypatch.setattr("src.run.gh_available", lambda: True)
 
     fake_snapshot = {"owner": "demo", "repo": "app", "pr": 7, "title": "T",
                      "body": "B", "author": "a", "base": "main", "head": "x",
@@ -122,10 +122,10 @@ def test_verify_run_bumps_rounds(tmp_path, monkeypatch):
     def fake_run_verify(cfg, workspace, session_dir, snapshot, claims):
         return fake_findings
 
-    monkeypatch.setattr("snapshot.build_snapshot", fake_build_snapshot)
-    monkeypatch.setattr("claims.extract_claims", fake_extract_claims)
-    monkeypatch.setattr("run.setup_workspace", fake_setup_workspace)
-    monkeypatch.setattr("run.run_verify", fake_run_verify)
+    monkeypatch.setattr("src.snapshot.build_snapshot", fake_build_snapshot)
+    monkeypatch.setattr("src.claims.extract_claims", fake_extract_claims)
+    monkeypatch.setattr("src.run.setup_workspace", fake_setup_workspace)
+    monkeypatch.setattr("src.run.run_verify", fake_run_verify)
 
     assert main(["demo/app", "7", "--no-post"]) == 0
     rounds_file = tmp_path / "sessions" / "demo" / "app" / "pr-7" / "rounds.txt"
@@ -140,8 +140,8 @@ def test_verify_run_bumps_rounds(tmp_path, monkeypatch):
 
 def test_doctor_ready(tmp_path, monkeypatch, capsys):
     monkeypatch.setenv("DEEPSEEK_API_KEY", "sk-test")
-    monkeypatch.setattr("run.gh_available", lambda: True)
-    monkeypatch.setattr("run.run_gh", lambda args, **kw: {"login": "dev1"})
+    monkeypatch.setattr("src.run.gh_available", lambda: True)
+    monkeypatch.setattr("src.run.run_gh", lambda args, **kw: {"login": "dev1"})
 
     code = main(["doctor"])
     assert code == 0
@@ -154,8 +154,8 @@ def test_doctor_ready(tmp_path, monkeypatch, capsys):
 
 def test_doctor_missing_key(tmp_path, monkeypatch, capsys):
     monkeypatch.delenv("DEEPSEEK_API_KEY", raising=False)
-    monkeypatch.setattr("run.gh_available", lambda: True)
-    monkeypatch.setattr("run.run_gh", lambda args, **kw: {"login": "dev1"})
+    monkeypatch.setattr("src.run.gh_available", lambda: True)
+    monkeypatch.setattr("src.run.run_gh", lambda args, **kw: {"login": "dev1"})
 
     code = main(["doctor"])
     assert code == 1
@@ -165,7 +165,7 @@ def test_doctor_missing_key(tmp_path, monkeypatch, capsys):
 
 def test_doctor_no_gh(tmp_path, monkeypatch, capsys):
     monkeypatch.setenv("DEEPSEEK_API_KEY", "sk-test")
-    monkeypatch.setattr("run.gh_available", lambda: False)
+    monkeypatch.setattr("src.run.gh_available", lambda: False)
 
     code = main(["doctor"])
     assert code == 1

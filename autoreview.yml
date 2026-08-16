@@ -7,3 +7,6 @@ drafts: false
 skip_bots: true
 repos:
   nexpeakcore/deepseek-harness-pr-review: auto
+  admin-web: auto
+  sample-org/sample-api: auto
+  sample-app2: auto

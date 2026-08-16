@@ -9,11 +9,11 @@ import json
 import sys
 from pathlib import Path
 
-from config import load_config
-from gh import gh_available, run_gh
-from human_gate import run_gate
-from synthesize import build_comment, build_report, post_comment
-from verify import run_verify, setup_workspace
+from src.config import load_config
+from src.gh import gh_available, run_gh
+from src.human_gate import run_gate
+from src.synthesize import build_comment, build_report, post_comment
+from src.verify import run_verify, setup_workspace
 
 
 def _doctor() -> int:
@@ -54,7 +54,7 @@ def _doctor() -> int:
         print("✗ deepseek-harness-sdk not installed — run `pip install -e '.[dev]'`")
         ok = False
 
-    from autoreview_config import load_config as load_autoreview_config
+    from src.autoreview_config import load_config as load_autoreview_config
 
     config_path = Path("autoreview.yml")
     if config_path.exists():
@@ -126,7 +126,7 @@ def main(argv: list[str] | None = None) -> int:
         parser.print_help()
         return 2
 
-    from repo_ref import parse_pr, parse_repo
+    from src.repo_ref import parse_pr, parse_repo
 
     try:
         if "#" in args.pr or "/pull/" in args.pr:
@@ -167,8 +167,8 @@ def main(argv: list[str] | None = None) -> int:
                 (session_dir / name).write_text(src.read_text())
             findings = json.loads((session_dir / "findings.json").read_text())
         else:
-            from snapshot import build_snapshot
-            from claims import extract_claims
+            from src.snapshot import build_snapshot
+            from src.claims import extract_claims
 
             snapshot = _load_or_skip("snapshot.json", session_dir, args.force)
             if snapshot is None:

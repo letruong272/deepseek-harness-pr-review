@@ -3,7 +3,7 @@ import subprocess
 
 import pytest
 
-from verify import build_verify_prompt, parse_findings, setup_workspace
+from src.verify import build_verify_prompt, parse_findings, setup_workspace
 
 
 def test_setup_workspace_clones_and_checks_out(tmp_path):

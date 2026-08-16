@@ -97,7 +97,7 @@ def list_repos(path: Path, gh=None) -> list[dict]:
     """
     cfg = load_config(path)
     if gh is None:
-        from gh import run_gh
+        from src.gh import run_gh
         gh = run_gh
     names = list(cfg["repos"].keys())
     if cfg.get("org"):
