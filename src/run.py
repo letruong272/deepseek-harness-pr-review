@@ -108,7 +108,7 @@ def main(argv: list[str] | None = None) -> int:
         else:
             print("Comment đã tồn tại (có marker) — bỏ qua.")
         return 0
-    except RuntimeError as e:
+    except (RuntimeError, ValueError) as e:
         print(f"Lỗi: {e}", file=sys.stderr)
         return 1
 
