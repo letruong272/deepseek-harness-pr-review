@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "deepseek-harness-pr-review"
-version = "1.0.3"
+version = "1.0.4"
 description = "Headless PR review automation on top of DeepSeek Harness"
 requires-python = ">=3.10"
 dependencies = [
@@ -23,6 +23,9 @@ web = ["fastapi", "uvicorn", "jinja2", "httpx"]
 [tool.setuptools.packages.find]
 where = ["."]
 include = ["src*", "web*"]
+
+[tool.setuptools.package-data]
+web = ["templates/*.html", "static/*.css"]
 
 [tool.pytest.ini_options]
 pythonpath = ["src", "."]
