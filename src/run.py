@@ -101,6 +101,42 @@ def _bump_rounds(session_dir: Path) -> None:
     path.write_text(str(current + 1))
 
 
+def _version() -> int:
+    """Print the installed version."""
+    try:
+        ver = importlib.metadata.version("deepseek-harness-pr-review")
+    except importlib.metadata.PackageNotFoundError:
+        ver = "dev (not installed via pip)"
+    print(ver)
+    return 0
+
+
+def _update() -> int:
+    """Self-update from GitHub: pip install -U git+URL."""
+    import subprocess
+
+    try:
+        old = importlib.metadata.version("deepseek-harness-pr-review")
+    except importlib.metadata.PackageNotFoundError:
+        old = "dev (not installed via pip)"
+    print(f"Current version: {old}")
+    print("Updating from GitHub...")
+    proc = subprocess.run(
+        [sys.executable, "-m", "pip", "install", "-U",
+         "git+https://github.com/nexpeakcore/deepseek-harness-pr-review.git"],
+        capture_output=True, text=True)
+    if proc.returncode != 0:
+        print(f"Update failed:\n{proc.stderr[-2000:]}", file=sys.stderr)
+        return 1
+    try:
+        new = importlib.metadata.version("deepseek-harness-pr-review")
+    except importlib.metadata.PackageNotFoundError:
+        new = "?"
+    print(f"Updated: {old} → {new}")
+    print("Note: restart a running web dashboard to pick up the new code.")
+    return 0
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(prog="harness-pr-review")
     parser.add_argument("pr", nargs="?", help="<owner>/<repo> <pr-number> or owner/repo#n")
@@ -117,11 +153,18 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--fixtures", type=Path, default=None,
                         help="directory containing snapshot.json/claims.json/findings.json "
                              "(for e2e, skips gh & model)")
+    parser.add_argument("--version", action="store_true",
+                        help="print the installed version")
     parser.add_argument("doctor", nargs="?", help="check readiness (Python, gh, API key, SDK)")
+    parser.add_argument("update", nargs="?", help="self-update from GitHub")
     args = parser.parse_args(argv)
 
+    if args.version:
+        return _version()
     if args.doctor == "doctor" or args.pr == "doctor":
         return _doctor()
+    if args.update == "update" or args.pr == "update":
+        return _update()
     if args.pr is None:
         parser.print_help()
         return 2

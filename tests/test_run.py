@@ -171,3 +171,29 @@ def test_doctor_no_gh(tmp_path, monkeypatch, capsys):
     assert code == 1
     out = capsys.readouterr().out
     assert "gh CLI not installed" in out
+
+
+def test_version_flag(monkeypatch, capsys):
+    monkeypatch.setattr("run.importlib.metadata.version",
+                        lambda name: "0.1.0")
+    code = main(["--version"])
+    assert code == 0
+    assert "0.1.0" in capsys.readouterr().out
+
+
+def test_update_command(monkeypatch, capsys):
+    calls = []
+    monkeypatch.setattr("run.importlib.metadata.version",
+                        lambda name: "0.1.0")
+
+    def fake_pip(args, **kw):
+        calls.append(args)
+        return type("R", (), {"returncode": 0, "stdout": "", "stderr": ""})()
+
+    monkeypatch.setattr("subprocess.run", fake_pip)
+    code = main(["update"])
+    assert code == 0
+    assert calls[0][0] == "python" or "pip" in str(calls[0])
+    assert "install" in calls[0]
+    assert "git+https://github.com/nexpeakcore/deepseek-harness-pr-review.git" in calls[0]
+    assert "Updated" in capsys.readouterr().out
