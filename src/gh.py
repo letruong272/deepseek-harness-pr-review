@@ -13,7 +13,12 @@ def run_gh(args: list[str], *, json: bool = True) -> dict | list:
         raise RuntimeError(f"gh api failed: {proc.stderr.strip()}")
     if not json:
         return proc.stdout
-    return _json.loads(proc.stdout)
+    try:
+        return _json.loads(proc.stdout)
+    except _json.JSONDecodeError as e:
+        raise RuntimeError(
+            f"gh api returned invalid JSON: {e}. stdout={proc.stdout[:200]!r}"
+        ) from e
 
 
 def gh_available() -> bool:
