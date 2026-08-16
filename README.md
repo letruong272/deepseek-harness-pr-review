@@ -1,9 +1,47 @@
-# Harness PR Review
+# AI Code Review with DeepSeek — Headless PR Review Automation
 
-Headless PR review running locally on the DeepSeek Harness SDK: deep-dive code,
-verify the PR description claim by claim, check whether docs in the repo match
-reality, analyze requirement impact, and use human-in-the-loop when uncertain
-(≤20 words/question). Output: local English report + one English comment on the PR.
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+[![Python 3.10+](https://img.shields.io/badge/python-3.10+-blue.svg)](pyproject.toml)
+[![Built on DeepSeek Harness](https://img.shields.io/badge/built%20on-DeepSeek%20Harness-4dabf7.svg)](https://deepseek.com/harness/en/)
+
+**AI code review with DeepSeek: headless PR review automation** that verifies
+PR descriptions claim-by-claim against real code, checks docs against reality,
+and flags requirement impact — with human-in-the-loop only when it matters.
+
+## Why
+
+PR descriptions lie. Docs go stale. Manual code review is slow and
+inconsistent. This tool runs a DeepSeek Harness agent that:
+
+- **Verifies PR descriptions claim-by-claim** — each sentence of the
+  description is checked against the actual code, with `file:line` evidence
+- **Detects stale and fabricated docs** — up to 60% of repo docs are wrong;
+  the agent compares them against real code (`MATCH / STALE / WRONG /
+  FABRICATED`)
+- **Flags requirement impact** — which business requirements a change touches,
+  and whether it breaks something (`CHANGED / BROKEN / RISK`)
+- **Runs headless** — one command, or an auto-review poller that watches every
+  new PR
+
+## Demo
+
+[![Dashboard demo](docs/screenshots/repo-detail.png)](docs/screenshots/repo-detail.png)
+
+Dashboard: per-repo KPIs, verdict distribution, and every open PR with review
+status. Live demo data is included — see [Web dashboard](#web-dashboard).
+
+## Features
+
+| | |
+|---|---|
+| ✅ **Claim verification** | PR description split into verifiable claims, each checked against code with evidence |
+| ✅ **Docs reality-check** | Docs compared to real code: `MATCH / STALE / WRONG / FABRICATED` |
+| ✅ **Requirement impact** | `CHANGED / BROKEN / RISK` analysis per business requirement |
+| ✅ **Human-in-the-loop** | ≤20-word confirmation questions only when uncertain — no guessing |
+| ✅ **Auto review poller** | Reviews new PRs automatically, re-reviews when the head commit changes |
+| ✅ **Web dashboard** | Read-only metrics: bugs, doc errors, verdicts, review rounds per repo |
+| ✅ **Idempotent PR comments** | One English comment per PR, updated in place — never duplicated |
+| ✅ **Traceable** | Every phase writes structured JSON to `sessions/` |
 
 ## Install
 
@@ -78,7 +116,7 @@ from the web dashboard (repo list page → toggle Auto/Manual).
 
 ```yaml
 # autoreview.yml
-org: nexpeakcore            # default org for repo discovery
+org: sample-org            # default org for repo discovery
 default_mode: manual        # repos not listed → manual
 interval_minutes: 2
 post_comment: true
@@ -140,3 +178,7 @@ re-run with `--force`; the PR comment is updated in place (never duplicated).
 | `DSH_MODEL` | `deepseek-v4-flash` | Model used for the agent + claim extraction |
 | `DEEPSEEK_BASE_URL` | `https://api.deepseek.com/v1` | OpenAI-compatible endpoint |
 | `DSH_SESSION_ROOT` | `sessions` | Directory storing per-phase results |
+
+## License
+
+[MIT](LICENSE) © 2026 Nexpeak
