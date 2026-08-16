@@ -374,3 +374,40 @@ def test_pr_page_not_reviewed_placeholder(client, monkeypatch):
     assert "Not reviewed yet" in resp.text
     assert "Review now" in resp.text
     assert "chore: update deps" in resp.text
+
+
+def test_repo_page_no_session_shows_open_prs(tmp_path, monkeypatch):
+    monkeypatch.setenv("DSH_SESSION_ROOT", str(tmp_path / "sessions"))
+    monkeypatch.setattr("src.gh.run_gh",
+                        lambda args, **kw: [{"number": 78,
+                                             "title": "chore: update deps",
+                                             "draft": False}] if "pulls" in args[1]
+                        else {"full_name": "sample-org/sample-app"})
+    client = TestClient(app)
+    resp = client.get("/repos/sample-org/sample-app")
+    assert resp.status_code == 200
+    assert "No reviews yet" in resp.text
+    assert "chore: update deps" in resp.text
+    assert "Review now" in resp.text
+
+
+def test_repo_page_gh_404(tmp_path, monkeypatch):
+    monkeypatch.setenv("DSH_SESSION_ROOT", str(tmp_path / "sessions"))
+
+    def fake_gh(args, **kw):
+        raise RuntimeError("not found")
+
+    monkeypatch.setattr("src.gh.run_gh", fake_gh)
+    client = TestClient(app)
+    assert client.get("/repos/sample-org/nope").status_code == 404
+
+
+def test_repo_list_auto_card_links_dashboard(tmp_path, monkeypatch):
+    cfg_path = tmp_path / "autoreview.yml"
+    cfg_path.write_text("org: sample-org\nrepos:\n  sample-app: auto\n")
+    monkeypatch.setenv("AUTOREVIEW_CONFIG", str(cfg_path))
+    monkeypatch.setenv("DSH_SESSION_ROOT", str(tmp_path / "sessions"))
+    client = TestClient(app)
+    r = client.get("/")
+    assert r.status_code == 200
+    assert 'href="/repos/sample-org/sample-app"' in r.text

@@ -4,7 +4,10 @@
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 {% endblock %}
 {% block content %}
-<h1>{{ repo.owner }}/{{ repo.repo }}</h1>
+<h1>{{ repo.owner }}/{{ repo.repo }}
+  {% if not repo.has_data %}<span class="tag auto">AUTO</span>{% endif %}</h1>
+{% if not repo.has_data %}<p class="muted">No reviews yet — new PRs are
+reviewed automatically. Click <b>Review now</b> to run the first one.</p>{% endif %}
 
 <div class="kpi-row">
   <div class="kpi-card"><div class="kpi-label">PRs REVIEWED</div>

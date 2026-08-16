@@ -85,12 +85,24 @@ def config_page(request: Request):
 
 @app.get("/repos/{owner}/{repo}", response_class=HTMLResponse)
 def repo_page(request: Request, owner: str, repo: str):
+    from src.gh import run_gh
+
     rec = metrics.repo_record(_session_root(), owner, repo)
     if rec is None:
-        raise HTTPException(status_code=404, detail="Repo not found in sessions")
+        # Chưa có session — repo vẫn render nếu tồn tại trên GitHub (PR open)
+        try:
+            run_gh(["api", f"repos/{owner}/{repo}"])
+        except (RuntimeError, OSError):
+            raise HTTPException(status_code=404,
+                                detail="Repo not found")
+        rec = {"owner": owner, "repo": repo, "prs_total": 0, "bugs_total": 0,
+               "doc_errors_total": 0, "verdict_count":
+                   {"ACCURATE": 0, "PARTIAL": 0, "MISLEADING": 0,
+                    "NO_CLAIMS": 0}, "prs": [], "has_data": False}
+    else:
+        rec["has_data"] = True
     verdict_json = json.dumps(rec["verdict_count"])
     open_qs = sum(p["open_questions"] for p in rec["prs"])
-    from src.gh import run_gh
 
     pr_rows = metrics.open_prs(_session_root(), owner, repo, gh=run_gh)
     return templates.TemplateResponse(
