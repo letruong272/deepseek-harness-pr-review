@@ -25,7 +25,7 @@ inconsistent. This tool runs a DeepSeek Harness agent that:
 
 ## Demo
 
-[![Dashboard demo](docs/screenshots/repo-detail.png)](docs/screenshots/repo-detail.png)
+[![Dashboard demo](docs/screenshots/dashboard-demo.png)](docs/screenshots/dashboard-demo.png)
 
 Dashboard: per-repo KPIs, verdict distribution, and every open PR with review
 status. Live demo data is included — see [Web dashboard](#web-dashboard).
