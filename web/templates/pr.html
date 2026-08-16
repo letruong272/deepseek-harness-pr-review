@@ -3,6 +3,17 @@
 <a class="crumb" href="/repos/{{ repo_owner }}/{{ repo_name }}">← {{ repo_owner }}/{{ repo_name }}</a>
 {% endblock %}
 {% block content %}
+{% if not_reviewed %}
+<h1>PR #{{ pr_info.pr }} — {{ pr_info.title }}</h1>
+<p class="muted">{{ pr_info.author }} · {{ pr_info.base }} → {{ pr_info.head }}</p>
+<div class="config-block">
+  <h2>Not reviewed yet</h2>
+  <p class="muted">This PR has no review session yet. Run a review to get
+  claim-level verification, docs reality-check and requirement impact.</p>
+  <button class="tab-btn review-btn" id="review-now-btn"
+          onclick="triggerReview({{ pr_info.pr }}, this)">Review now</button>
+</div>
+{% else %}
 <h1>PR #{{ detail.pr.pr }} — {{ detail.title }}</h1>
 <p class="muted">{{ detail.pr.author }} · {{ detail.pr.base }} → {{ detail.pr.head }}</p>
 <span class="verdict v-{{ detail.pr.verdict|lower }}">{{ detail.pr.verdict }}</span>
@@ -92,6 +103,7 @@
     </tbody>
   </table>
 </div>
+{% endif %}
 
 <script>
 function showTab(id, btn) {
@@ -99,6 +111,29 @@ function showTab(id, btn) {
   document.querySelectorAll(".tab-btn").forEach(b => b.classList.remove("active"));
   document.getElementById(id).style.display = "block";
   btn.classList.add("active");
+}
+
+async function triggerReview(pr, btn) {
+  if (btn.disabled) return;
+  btn.disabled = true;
+  const original = btn.textContent;
+  btn.textContent = "Running…";
+  try {
+    const r = await fetch(`/api/repos/{{ repo_owner }}/{{ repo_name }}/pr/${pr}/review`,
+                          {method: "POST"});
+    if (!r.ok) {
+      const data = await r.json().catch(() => ({}));
+      alert(data.detail || "review failed");
+      btn.textContent = original;
+      btn.disabled = false;
+      return;
+    }
+    location.reload();
+  } catch (e) {
+    alert("network error: " + e);
+    btn.textContent = original;
+    btn.disabled = false;
+  }
 }
 </script>
 {% endblock %}

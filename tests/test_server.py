@@ -306,3 +306,17 @@ def test_repo_list_shows_auto_repos_without_data(tmp_path, monkeypatch):
     assert "sample-org/sample-app" in r.text
     assert "AUTO" in r.text
     assert "reviewed automatically" in r.text
+
+
+def test_pr_page_not_reviewed_placeholder(client, monkeypatch):
+    monkeypatch.setattr("gh.run_gh",
+                        lambda args, **kw: {"number": 78,
+                                            "title": "chore: update deps",
+                                            "user": {"login": "bot"},
+                                            "base": {"ref": "main"},
+                                            "head": {"ref": "renovate"}})
+    resp = client.get("/repos/sample-org/sample-app/pr/78")
+    assert resp.status_code == 200
+    assert "Not reviewed yet" in resp.text
+    assert "Review now" in resp.text
+    assert "chore: update deps" in resp.text

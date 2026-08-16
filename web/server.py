@@ -102,10 +102,26 @@ def repo_page(request: Request, owner: str, repo: str):
 def pr_page(request: Request, owner: str, repo: str, pr: int):
     detail = metrics.pr_detail(_session_root(), owner, repo, pr)
     if detail is None:
-        raise HTTPException(status_code=404, detail="PR not found in sessions")
+        # PR chưa review → hiện placeholder + nút Review now (title từ gh)
+        from gh import run_gh
+
+        try:
+            meta = run_gh(["api", f"repos/{owner}/{repo}/pulls/{pr}"])
+            pr_info = {"pr": pr, "title": meta.get("title", ""),
+                       "author": (meta.get("user") or {}).get("login", ""),
+                       "base": (meta.get("base") or {}).get("ref", ""),
+                       "head": (meta.get("head") or {}).get("ref", "")}
+        except (RuntimeError, OSError):
+            raise HTTPException(status_code=404,
+                                detail="PR not found in sessions")
+        return templates.TemplateResponse(
+            request, "pr.html",
+            {"detail": None, "pr_info": pr_info, "not_reviewed": True,
+             "repo_owner": owner, "repo_name": repo})
     return templates.TemplateResponse(
         request, "pr.html",
-        {"detail": detail, "repo_owner": owner, "repo_name": repo})
+        {"detail": detail, "pr_info": None, "not_reviewed": False,
+         "repo_owner": owner, "repo_name": repo})
 
 
 @app.get("/api/config")
