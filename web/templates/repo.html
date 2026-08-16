@@ -1,0 +1,53 @@
+{% extends "base.html" %}
+{% block nav %}<a class="crumb" href="/">← Repos</a>{% endblock %}
+{% block head %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+{% endblock %}
+{% block content %}
+<h1>{{ repo.owner }}/{{ repo.repo }}</h1>
+
+<div class="kpi-row">
+  <div class="kpi-card"><div class="kpi-label">PRs REVIEWED</div>
+    <div class="kpi-value">{{ repo.prs_total }}</div></div>
+  <div class="kpi-card bad"><div class="kpi-label">BUGS</div>
+    <div class="kpi-value">{{ repo.bugs_total }}</div></div>
+  <div class="kpi-card warn"><div class="kpi-label">DOC ERRORS</div>
+    <div class="kpi-value">{{ repo.doc_errors_total }}</div></div>
+  <div class="kpi-card"><div class="kpi-label">OPEN Qs</div>
+    <div class="kpi-value">{{ open_qs }}</div></div>
+  <div class="kpi-card chart-card"><div class="kpi-label">VERDICTS</div>
+    <canvas id="verdictChart" width="90" height="90"></canvas></div>
+</div>
+
+<h2>Pull requests</h2>
+<table class="table">
+  <thead><tr><th>#</th><th>Title</th><th>Verdict</th><th>Bugs</th>
+    <th>Doc errors</th><th>Updated</th></tr></thead>
+  <tbody>
+  {% for p in repo.prs %}
+    <tr class="{{ 'failed' if p.failed else '' }}">
+      <td><a href="/repos/{{ repo.owner }}/{{ repo.repo }}/pr/{{ p.pr }}">#{{ p.pr }}</a></td>
+      <td>{{ p.title }} {% if p.failed %}<span class="tag fail">FAILED</span>{% endif %}</td>
+      <td><span class="verdict v-{{ p.verdict|lower }}">{{ p.verdict }}</span></td>
+      <td>{{ p.bugs }}</td><td>{{ p.doc_errors }}</td>
+      <td class="muted">{{ p.updated_at }}</td>
+    </tr>
+  {% endfor %}
+  </tbody>
+</table>
+
+<script>
+const verdictData = {{ verdict_json | safe }};
+new Chart(document.getElementById("verdictChart"), {
+  type: "doughnut",
+  data: {
+    labels: Object.keys(verdictData),
+    datasets: [{
+      data: Object.values(verdictData),
+      backgroundColor: ["#27ae60", "#f39c12", "#e74c3c", "#95a5a6"]
+    }]
+  },
+  options: { plugins: { legend: { display: false } } }
+});
+</script>
+{% endblock %}

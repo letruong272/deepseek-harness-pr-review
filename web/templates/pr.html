@@ -1,0 +1,104 @@
+{% extends "base.html" %}
+{% block nav %}
+<a class="crumb" href="/repos/{{ repo_owner }}/{{ repo_name }}">← {{ repo_owner }}/{{ repo_name }}</a>
+{% endblock %}
+{% block content %}
+<h1>PR #{{ detail.pr.pr }} — {{ detail.title }}</h1>
+<p class="muted">{{ detail.pr.author }} · {{ detail.pr.base }} → {{ detail.pr.head }}</p>
+<span class="verdict v-{{ detail.pr.verdict|lower }}">{{ detail.pr.verdict }}</span>
+
+<div class="tabs">
+  <button class="tab-btn active" onclick="showTab('tab-claims', this)">Claims ({{ detail.claims|length }})</button>
+  <button class="tab-btn" onclick="showTab('tab-docs', this)">Docs ({{ detail.docs|length }})</button>
+  <button class="tab-btn" onclick="showTab('tab-impact', this)">Impact ({{ detail.impact|length }})</button>
+  <button class="tab-btn" onclick="showTab('tab-threads', this)">Threads ({{ detail.threads|length }})</button>
+  <button class="tab-btn" onclick="showTab('tab-confirm', this)">Confirm ({{ detail.answers|length }})</button>
+</div>
+
+<div id="tab-claims" class="tab-panel">
+  <table class="table">
+    <thead><tr><th>Claim</th><th>Category</th><th>Status</th><th>Evidence</th><th>Note</th></tr></thead>
+    <tbody>
+    {% for c in detail.claims %}
+      <tr>
+        <td><b>{{ c.id }}</b> {{ c.text }}</td>
+        <td>{{ c.category }}</td>
+        <td><span class="verdict v-{{ c.status|lower }}">{{ c.status }}</span></td>
+        <td class="muted">{{ c.evidence|join(", ") }}</td>
+        <td class="muted">{{ c.note }}</td>
+      </tr>
+    {% else %}
+      <tr><td colspan="5" class="empty">No claims</td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+<div id="tab-docs" class="tab-panel" style="display:none">
+  <table class="table">
+    <thead><tr><th>Doc</th><th>Status</th><th>Difference</th></tr></thead>
+    <tbody>
+    {% for d in detail.docs %}
+      <tr><td>{{ d.path }}</td>
+          <td><span class="verdict v-{{ d.status|lower }}">{{ d.status }}</span></td>
+          <td class="muted">{{ d.what }}</td></tr>
+    {% else %}
+      <tr><td colspan="3" class="empty">No docs checked</td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+<div id="tab-impact" class="tab-panel" style="display:none">
+  <table class="table">
+    <thead><tr><th>Requirement</th><th>Impact</th><th>Detail</th></tr></thead>
+    <tbody>
+    {% for i in detail.impact %}
+      <tr><td>{{ i.requirement }}</td>
+          <td><span class="verdict v-{{ i.impact|lower }}">{{ i.impact }}</span></td>
+          <td class="muted">{{ i.detail }}</td></tr>
+    {% else %}
+      <tr><td colspan="3" class="empty">No impact analysis</td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+<div id="tab-threads" class="tab-panel" style="display:none">
+  <table class="table">
+    <thead><tr><th>Comment</th><th>Status</th><th>Note</th></tr></thead>
+    <tbody>
+    {% for t in detail.threads %}
+      <tr><td>{{ t.text }}</td>
+          <td><span class="verdict v-{{ t.status|lower }}">{{ t.status }}</span></td>
+          <td class="muted">{{ t.note }}</td></tr>
+    {% else %}
+      <tr><td colspan="3" class="empty">No review threads</td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+<div id="tab-confirm" class="tab-panel" style="display:none">
+  <table class="table">
+    <thead><tr><th>Question</th><th>Answer</th></tr></thead>
+    <tbody>
+    {% for a in detail.answers %}
+      <tr><td>{{ a.question }}</td>
+          <td>{{ a.answer }}</td></tr>
+    {% else %}
+      <tr><td colspan="2" class="empty">No confirmations recorded</td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+<script>
+function showTab(id, btn) {
+  document.querySelectorAll(".tab-panel").forEach(p => p.style.display = "none");
+  document.querySelectorAll(".tab-btn").forEach(b => b.classList.remove("active"));
+  document.getElementById(id).style.display = "block";
+  btn.classList.add("active");
+}
+</script>
+{% endblock %}
