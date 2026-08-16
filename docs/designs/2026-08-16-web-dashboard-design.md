@@ -1,5 +1,7 @@
 # Design: Web Dashboard for PR Review Metrics
 
+> **Superseded (historical):** describes the original read-only dashboard on port 8000. Current web dashboard runs on port 6789 and adds repo config management, review triggers, review status/log and open-PR tables. See README.md for current behavior.
+
 - Date: 2026-08-16
 - Status: Approved (3 sections reviewed)
 

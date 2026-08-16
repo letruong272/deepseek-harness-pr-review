@@ -1,5 +1,7 @@
 # Design: Review Now Button (Trigger Review from Repo Page)
 
+> **Superseded (historical):** proposed lock file `review-{n}.lock`. Current code uses `session_dir/review.lock` with JSON metadata (pid + started_at). See review-status-log design for the current spec.
+
 - Date: 2026-08-16
 - Status: Approved (3 sections reviewed)
 

@@ -1,5 +1,7 @@
 # Web Dashboard Implementation Plan
 
+> **Superseded (historical):** plan describes a read-only dashboard on port 8000. Current web is feature-extended and uses port 6789. See README.md.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Read-only local web dashboard (FastAPI + Jinja2 + Chart.js) showing per-repo and per-PR review metrics from the `sessions/` directory: PRs reviewed, bugs, doc errors, verdicts, open questions.

@@ -1,5 +1,7 @@
 # Auto Review Poller Implementation Plan
 
+> **Superseded (historical):** plan snippets predate the `src.*` package imports and the current `--add-repo` acceptance of GitHub URLs and bare names. See src/autoreview.py and README.md for current behavior.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Local poller (`src/autoreview.py`) that automatically reviews new PRs (and re-reviews PRs whose head SHA changed) on a configurable repo list, using the existing pipeline in batch mode.

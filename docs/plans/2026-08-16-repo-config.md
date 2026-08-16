@@ -1,5 +1,7 @@
 # Per-Repo Auto/Manual Config + Web UI Implementation Plan
 
+> **Superseded (historical):** plan code uses non-`src` imports and `--add-repo` examples only show name/owner. Current code uses `src.*` imports and accepts GitHub URLs. See README.md.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Per-repo `auto`/`manual` review control, editable from both the web dashboard (repo list page) and CLI subcommands, all writing the same `autoreview.yml`.

@@ -1,5 +1,7 @@
 # Repo Page — Open PRs + Review Status + Rounds Implementation Plan
 
+> **Superseded (historical):** snippets use non-`src` import paths (e.g. `run.gh_available`). Behavior otherwise matches; see web/ for current implementation.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Repo page lists ALL open PRs (from GitHub) with per-PR review status (Not reviewed / Reviewing / Reviewed N rounds), plus broader Bugs/Doc errors metrics that match the PR detail page.

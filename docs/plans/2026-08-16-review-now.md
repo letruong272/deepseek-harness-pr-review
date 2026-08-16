@@ -1,5 +1,7 @@
 # Review Now Button Implementation Plan
 
+> **Superseded (historical):** snippets use non-`src` imports (`from run import main`) and older mock paths. Current server uses `src.run.main`. See web/server.py.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Add a "Review now" / "Re-review" button per open PR on the repo page that triggers a synchronous review via the existing pipeline, using the repo's auto-review config.
