@@ -335,7 +335,7 @@ def trigger_review(owner: str, repo: str, pr: int):
 
     log_path = lock.parent / "review.log"
     try:
-        with open(log_path, "w") as logf:
+        with open(log_path, "w", buffering=1) as logf:
             with contextlib.redirect_stdout(logf), \
                     contextlib.redirect_stderr(logf):
                 args = [f"{owner}/{repo}", str(pr), "--force"]

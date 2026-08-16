@@ -432,3 +432,14 @@ def test_pr_page_reviewing_state(tmp_path, monkeypatch):
     assert resp.status_code == 200
     assert "Reviewing…" in resp.text
     assert "Not reviewed yet" not in resp.text
+
+
+def test_review_log_api_live_lines(tmp_path, monkeypatch):
+    monkeypatch.setenv("DSH_SESSION_ROOT", str(tmp_path / "sessions"))
+    session_dir = tmp_path / "sessions" / "sample-org" / "sample-app" / "pr-78"
+    session_dir.mkdir(parents=True)
+    (session_dir / "review.log").write_text("line1\nline2\n")
+    client = TestClient(app)
+    r = client.get("/api/repos/sample-org/sample-app/pr/78/review/log?lines=200")
+    assert r.status_code == 200
+    assert r.json()["log"] == "line1\nline2"
