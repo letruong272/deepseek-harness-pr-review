@@ -6,8 +6,13 @@ import urllib.request
 
 
 def chat(messages: list[dict], *, model: str, api_key: str, base_url: str,
-         max_tokens: int = 4096, retries: int = 3) -> str:
-    """POST {base_url}/chat/completions. Retry tối đa `retries` lần (timeout/429/5xx)."""
+         max_tokens: int = 16384, retries: int = 3) -> str:
+    """POST {base_url}/chat/completions. Retry tối đa `retries` lần (timeout/429/5xx).
+
+    max_tokens mặc định 16384: deepseek-v4-flash là reasoning model, dành phần
+    lớn tokens cho reasoning_content trước khi trả content thật — 4096 quá nhỏ
+    (finish_reason=length, content rỗng).
+    """
     payload = json.dumps({
         "model": model,
         "messages": messages,
