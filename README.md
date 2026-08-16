@@ -70,13 +70,22 @@ harness-pr-review doctor         # verify everything is ready
 
 ## Updating
 
-**Installed via pip (no clone):**
+**Easiest — built-in self-update:**
+
+```bash
+harness-pr-review update     # installs the latest version from GitHub
+harness-pr-review --version  # show the installed version
+```
+
+**Or manually:**
+
+Installed via pip (no clone):
 
 ```bash
 pip install -U git+https://github.com/nexpeakcore/deepseek-harness-pr-review.git
 ```
 
-**Cloned for development:**
+Cloned for development:
 
 ```bash
 git pull origin main   # pull the latest code
