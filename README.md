@@ -65,15 +65,30 @@ MISLEADING verdict + FABRICATED doc), useful for screenshots and documentation.
 
 ## Auto review
 
-Poll GitHub for new PRs (and head-SHA changes) on configured repos and review
-them automatically in batch mode.
+Poll GitHub for new PRs (and head-SHA changes) and review them automatically in
+batch mode. Each repo is configured `auto` (poller reviews its PRs) or `manual`
+(poller skips it; review via CLI). Edit `autoreview.yml` directly, via CLI, or
+from the web dashboard (repo list page → toggle Auto/Manual).
+
+```yaml
+# autoreview.yml
+org: nexpeakcore            # default org for repo discovery
+default_mode: manual        # repos not listed → manual
+interval_minutes: 10
+post_comment: true
+skip_human: true
+drafts: false
+repos:
+  sample-app: auto
+  sample-api: manual
+```
 
 ```bash
-# config: edit autoreview.yml (repos, interval, flags)
-pip install -e '.[dev]'   # pyyaml comes with the SDK; add if missing
-python -m src.autoreview --once            # single pass (cron/launchd)
-python -m src.autoreview --daemon          # loop every interval_minutes
-python -m src.autoreview --once --dry-run  # print what would be reviewed
+python -m src.autoreview --add-repo sample-app --mode auto   # enable auto
+python -m src.autoreview --rm-repo sample-app                # remove
+python -m src.autoreview --repos                             # list status
+python -m src.autoreview --once          # single pass (cron/launchd)
+python -m src.autoreview --daemon        # loop every interval_minutes
 ```
 
 launchd example:
