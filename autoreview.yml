@@ -4,9 +4,11 @@ interval_minutes: 2
 post_comment: true
 skip_human: true
 drafts: false
+skip_bots: true
 repos:
   sample-app: auto
   erp: auto
   sample-org: auto
   sample-org: auto
   sample-org-mobile: auto
+  deepseek-harness-pr-review: auto

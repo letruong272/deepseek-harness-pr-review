@@ -1,7 +1,9 @@
 # tests/test_autoreview.py
 import json
+import os
 
-from autoreview import decide_pr, main, plan_reviews, run_pass
+from autoreview import (_acquire_lock, _release_lock, decide_pr, main,
+                                   plan_reviews, run_pass)
 from autoreview_config import load_config
 
 EMPTY_FINDINGS = {"claims": [], "docs": [], "impact": [], "threads": [],
@@ -152,3 +154,39 @@ def test_run_pass_skips_manual_review_lock(tmp_path, monkeypatch, capsys):
     assert count == 0
     assert dispatched == []
     assert "manual review running" in capsys.readouterr().out
+
+
+def test_plan_reviews_skips_bots(tmp_path, capsys):
+    root = tmp_path / "sessions"
+    prs = [
+        {"number": 1, "head": {"sha": "a"}, "draft": False,
+         "user": {"login": "renovate[bot]", "type": "Bot"}},
+        {"number": 2, "head": {"sha": "b"}, "draft": False,
+         "user": {"login": "dev1", "type": "User"}},
+    ]
+    plans = plan_reviews(root, "o", "r", prs)
+    assert [p["pr"] for p in plans] == [2]
+    assert "SKIP-BOT" in capsys.readouterr().out
+
+
+def test_plan_reviews_bots_when_disabled(tmp_path):
+    root = tmp_path / "sessions"
+    prs = [
+        {"number": 1, "head": {"sha": "a"}, "draft": False,
+         "user": {"login": "renovate[bot]", "type": "Bot"}},
+    ]
+    plans = plan_reviews(root, "o", "r", prs, skip_bots=False)
+    assert [p["pr"] for p in plans] == [1]
+
+
+def test_acquire_lock_stale_pid(tmp_path, monkeypatch):
+    monkeypatch.setattr("autoreview.LOCK_PATH", tmp_path / "autoreview.lock")
+    (tmp_path / "autoreview.lock").write_text("999999")  # PID chết
+    assert _acquire_lock() is True
+    _release_lock()
+
+
+def test_acquire_lock_alive(tmp_path, monkeypatch):
+    monkeypatch.setattr("autoreview.LOCK_PATH", tmp_path / "autoreview.lock")
+    (tmp_path / "autoreview.lock").write_text(str(os.getpid()))  # PID sống
+    assert _acquire_lock() is False

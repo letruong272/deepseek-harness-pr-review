@@ -38,11 +38,19 @@ def decide_pr(session_root: Path, owner: str, repo: str, n: int,
 
 
 def plan_reviews(session_root: Path, owner: str, repo: str, prs: list[dict],
-                 drafts: bool = False) -> list[dict]:
-    """Return [{pr, head_sha, decision}] for open PRs of one repo."""
+                 drafts: bool = False, skip_bots: bool = True) -> list[dict]:
+    """Return [{pr, head_sha, decision}] for open PRs of one repo.
+
+    Bot PRs (user.type == "Bot") are skipped by default — they are usually
+    dependency bots (Renovate/Dependabot). Manual triggers bypass this.
+    """
     plans = []
     for p in prs:
         if p.get("draft") and not drafts:
+            continue
+        if skip_bots and (p.get("user") or {}).get("type") == "Bot":
+            print(f"SKIP-BOT {owner}/{repo}#{p['number']} "
+                  f"({(p.get('user') or {}).get('login')})")
             continue
         n = p["number"]
         head_sha = (p.get("head") or {}).get("sha", "")
@@ -57,6 +65,20 @@ def fetch_open_prs(owner: str, repo: str, gh=run_gh) -> list[dict]:
 
 
 def _acquire_lock() -> bool:
+    # Lock cũ mà PID chết → dọn và giành lại
+    if LOCK_PATH.exists():
+        try:
+            pid = int(LOCK_PATH.read_text().strip() or "0")
+            if pid > 0:
+                os.kill(pid, 0)  # alive → từ chối
+            else:
+                LOCK_PATH.unlink()
+        except ProcessLookupError:
+            LOCK_PATH.unlink()
+        except FileNotFoundError:
+            pass
+        except (PermissionError, ValueError):
+            return False
     try:
         fd = os.open(LOCK_PATH, os.O_CREAT | os.O_EXCL | os.O_WRONLY)
         os.write(fd, str(os.getpid()).encode())
@@ -103,7 +125,8 @@ def run_pass(cfg: dict, session_root: Path, dry_run: bool = False,
             print(f"POLL-ERROR {owner}/{repo}: {e}", file=sys.stderr)
             continue
         plans = plan_reviews(session_root, owner, repo, prs,
-                             drafts=cfg.get("drafts", False))
+                             drafts=cfg.get("drafts", False),
+                             skip_bots=cfg.get("skip_bots", True))
         for plan in plans:
             n = plan["pr"]
             line = f"{plan['decision']} {owner}/{repo}#{n}"

@@ -11,6 +11,7 @@ DEFAULTS = {
     "post_comment": True,
     "skip_human": True,
     "drafts": False,
+    "skip_bots": True,
 }
 
 
