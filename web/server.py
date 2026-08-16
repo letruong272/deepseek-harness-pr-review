@@ -37,6 +37,12 @@ def repo_list(request: Request):
         if rec is not None:
             repos.append(rec)
     repos.sort(key=lambda r: r["prs_total"], reverse=True)
+    return templates.TemplateResponse(
+        request, "repo_list.html", {"repos": repos})
+
+
+@app.get("/config", response_class=HTMLResponse)
+def config_page(request: Request):
     cfg_state = None
     path = _config_path()
     if path.exists():
@@ -53,7 +59,7 @@ def repo_list(request: Request):
         except (ValueError, OSError) as e:
             cfg_state = {"error": str(e)}
     return templates.TemplateResponse(
-        request, "repo_list.html", {"repos": repos, "cfg": cfg_state})
+        request, "config.html", {"cfg": cfg_state})
 
 
 @app.get("/repos/{owner}/{repo}", response_class=HTMLResponse)
@@ -150,4 +156,4 @@ def api_remove_repo(repo: str):
 if __name__ == "__main__":
     import uvicorn
 
-    uvicorn.run(app, host="127.0.0.1", port=8000)
+    uvicorn.run(app, host="127.0.0.1", port=6789)

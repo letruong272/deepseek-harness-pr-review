@@ -147,7 +147,20 @@ def test_api_config_missing_file_404(tmp_path, monkeypatch):
     assert client.get("/api/config").status_code == 404
 
 
-def test_repo_list_page_has_config_block(tmp_path, monkeypatch):
+def test_config_page_has_config_block(tmp_path, monkeypatch):
+    cfg_path = tmp_path / "autoreview.yml"
+    cfg_path.write_text("org: nexpeakcore\nrepos:\n  sample-app: auto\n")
+    monkeypatch.setenv("AUTOREVIEW_CONFIG", str(cfg_path))
+    monkeypatch.setenv("DSH_SESSION_ROOT", str(tmp_path / "sessions"))
+    monkeypatch.setattr("gh.run_gh", lambda args, **kw: [{"name": "sample-app"}])
+    client = TestClient(app)
+    r = client.get("/config")
+    assert r.status_code == 200
+    assert "Repo configuration" in r.text
+    assert "sample-app" in r.text
+
+
+def test_repo_list_page_has_no_config_block(tmp_path, monkeypatch):
     cfg_path = tmp_path / "autoreview.yml"
     cfg_path.write_text("org: nexpeakcore\nrepos:\n  sample-app: auto\n")
     monkeypatch.setenv("AUTOREVIEW_CONFIG", str(cfg_path))
@@ -156,5 +169,5 @@ def test_repo_list_page_has_config_block(tmp_path, monkeypatch):
     client = TestClient(app)
     r = client.get("/")
     assert r.status_code == 200
-    assert "Repo configuration" in r.text
-    assert "sample-app" in r.text
+    assert "Repo configuration" not in r.text
+    assert "Config" in r.text  # navbar link

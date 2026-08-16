@@ -6,3 +6,7 @@ skip_human: true
 drafts: false
 repos:
   sample-app: auto
+  erp: auto
+  sample-org: auto
+  sample-org: auto
+  sample-org-mobile: auto
