@@ -50,10 +50,20 @@ def test_build_comment_embeds_full_report(tmp_path):
     comment = build_comment(SNAPSHOT, CLAIMS, FINDINGS, ANSWERS,
                             report_content=report)
     assert "<!-- harness-pr-review -->" in comment
-    assert "<summary>Full report" in comment
-    assert "## Verdict" in comment
+    assert "Verdict:" in comment
     assert "REQ-1" in comment
-    assert "Matches" in comment
+    assert "PASS" in comment
+
+
+def test_build_comment_html_sections():
+    comment = build_comment(SNAPSHOT, CLAIMS, FINDINGS, ANSWERS)
+    assert "Claims" in comment
+    assert "Docs vs reality" in comment
+    assert "Requirement impact" in comment
+    assert "Review threads" in comment
+    assert "Confirm log" in comment
+    assert "<details" in comment
+    assert "background-color" in comment
 
 
 def test_post_comment_updates_via_gh(monkeypatch):
@@ -95,7 +105,8 @@ def test_build_report_escapes_cells(tmp_path):
     assert "Content" in report
     assert "Adds checkout" in report
     comment = build_comment(SNAPSHOT, CLAIMS, findings, [])
-    assert "comment with | pipe" in comment
+    assert "comment" in comment
+    assert "no" in comment  # HTML-escaped, không còn raw "| pipe"
 
 
 def test_no_claims_verdict(tmp_path):
