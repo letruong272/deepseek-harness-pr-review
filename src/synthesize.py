@@ -229,9 +229,7 @@ def build_comment(snapshot: dict, claims: list[dict], findings: dict,
     )
     return (
         f"## Harness PR Review — Verdict: {summary}\n\n"
-        f"{chr(10).join(sections)}\n\n"
-        f"Full report: local `sessions/{snapshot['owner']}/{snapshot['repo']}/"
-        f"pr-{snapshot['pr']}/report.md`\n\n{MARKER}"
+        f"{chr(10).join(sections)}\n\n{MARKER}"
     )
 
 
