@@ -12,3 +12,4 @@ dist/
 .gstack/
 autoreview.log
 autoreview.lock
+**/.DS_Store
