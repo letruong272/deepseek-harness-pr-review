@@ -33,6 +33,16 @@ def _write_failed_report(session_dir: Path, error: Exception) -> None:
     (session_dir / "report.md").write_text("\n".join(lines))
 
 
+def _bump_rounds(session_dir: Path) -> None:
+    """Increment the review-round counter for a session (after a verify pass)."""
+    path = session_dir / "rounds.txt"
+    try:
+        current = int(path.read_text().strip() or "0")
+    except (OSError, ValueError):
+        current = 0
+    path.write_text(str(current + 1))
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(prog="harness-pr-review")
     parser.add_argument("pr", help="<owner>/<repo> <pr-number> or owner/repo#n")
@@ -103,6 +113,7 @@ def main(argv: list[str] | None = None) -> int:
                     {"model": cfg.model}, workspace, session_dir, snapshot, claims)
                 (session_dir / "findings.json").write_text(
                     json.dumps(findings, indent=2))
+                _bump_rounds(session_dir)
 
         answers = _load_or_skip("answers.json", session_dir, args.force)
         if answers is None:
