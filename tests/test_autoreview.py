@@ -131,3 +131,24 @@ def test_main_repos_lists_status(tmp_path, monkeypatch, capsys):
     assert code == 0
     out = capsys.readouterr().out
     assert "sample-app" in out and "auto" in out
+
+
+def test_run_pass_skips_manual_review_lock(tmp_path, monkeypatch, capsys):
+    root = tmp_path / "sessions"
+    root.mkdir(parents=True)
+    cfg_path = tmp_path / "autoreview.yml"
+    cfg_path.write_text("org: nexpeakcore\nrepos:\n  sample-api: auto\n")
+    cfg = load_config(cfg_path)
+    lock = root / "nexpeakcore" / "sample-api" / "pr-1" / "review.lock"
+    lock.parent.mkdir(parents=True)
+    lock.touch()
+
+    dispatched = []
+    monkeypatch.setattr("autoreview._dispatch",
+                        lambda c, o, r, n, sha: (dispatched.append((o, r, n)) or 0))
+    count = run_pass(cfg, root, dry_run=False,
+                     gh=lambda args, **kw: [{"number": 1, "head": {"sha": "a"},
+                                             "draft": False}])
+    assert count == 0
+    assert dispatched == []
+    assert "manual review running" in capsys.readouterr().out

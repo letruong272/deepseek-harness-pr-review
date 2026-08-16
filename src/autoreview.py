@@ -115,6 +115,9 @@ def run_pass(cfg: dict, session_root: Path, dry_run: bool = False,
                 dispatched += 1
                 continue
             session_dir = session_root / owner / repo / f"pr-{n}"
+            if (session_dir / "review.lock").exists():
+                print(f"SKIP {owner}/{repo}#{n}: manual review running")
+                continue
             if plan["decision"] == "RE-RUN":
                 _clean_rerun_session(session_dir)
             print(line)
