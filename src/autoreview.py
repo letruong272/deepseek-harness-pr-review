@@ -1,0 +1,169 @@
+"""Local poller: auto-review new PRs / re-review PRs with changed head SHA.
+
+Modes:
+  --once      single pass (cron/launchd)
+  --daemon    loop with interval_minutes
+  --dry-run   print planned reviews without dispatching
+"""
+import argparse
+import json
+import os
+import sys
+import time
+from pathlib import Path
+
+from autoreview_config import load_config
+from config import load_config as load_env_config
+from gh import gh_available, run_gh
+
+CONFIG_PATH = Path("autoreview.yml")
+LOCK_PATH = Path("autoreview.lock")
+
+
+def decide_pr(session_root: Path, owner: str, repo: str, n: int,
+              head_sha: str) -> str:
+    """Return NEW / RE-RUN / SKIP for one PR."""
+    snapshot_path = session_root / owner / repo / f"pr-{n}" / "snapshot.json"
+    if not snapshot_path.exists():
+        return "NEW"
+    try:
+        snapshot = json.loads(snapshot_path.read_text())
+    except (json.JSONDecodeError, OSError):
+        return "RE-RUN"  # snapshot hỏng → chạy lại cho an toàn
+    old_sha = snapshot.get("head_sha", "")
+    if old_sha and old_sha == head_sha:
+        return "SKIP"
+    return "RE-RUN"
+
+
+def plan_reviews(session_root: Path, owner: str, repo: str, prs: list[dict],
+                 drafts: bool = False) -> list[dict]:
+    """Return [{pr, head_sha, decision}] for open PRs of one repo."""
+    plans = []
+    for p in prs:
+        if p.get("draft") and not drafts:
+            continue
+        n = p["number"]
+        head_sha = (p.get("head") or {}).get("sha", "")
+        decision = decide_pr(session_root, owner, repo, n, head_sha)
+        plans.append({"pr": n, "head_sha": head_sha, "decision": decision})
+    return plans
+
+
+def fetch_open_prs(owner: str, repo: str, gh=run_gh) -> list[dict]:
+    """Open PRs of a repo via gh api (returns raw list items)."""
+    return gh(["api", f"repos/{owner}/{repo}/pulls?state=open", "--paginate"])
+
+
+def _acquire_lock() -> bool:
+    try:
+        fd = os.open(LOCK_PATH, os.O_CREAT | os.O_EXCL | os.O_WRONLY)
+        os.write(fd, str(os.getpid()).encode())
+        os.close(fd)
+        return True
+    except FileExistsError:
+        return False
+
+
+def _release_lock() -> None:
+    try:
+        LOCK_PATH.unlink()
+    except FileNotFoundError:
+        pass
+
+
+def _clean_rerun_session(session_dir: Path) -> None:
+    """Xóa kết quả phase cũ trước khi re-review (giữ snapshot)."""
+    for name in ("findings.json", "answers.json", "report.md", "agent-log.txt"):
+        (session_dir / name).unlink(missing_ok=True)
+
+
+def _dispatch(cfg: dict, owner: str, repo: str, n: int,
+              head_sha: str) -> int:
+    """Chạy pipeline cho 1 PR. Trả về exit code."""
+    from run import main
+
+    args = [f"{owner}/{repo}", str(n), "--force"]
+    if cfg.get("skip_human", True):
+        args.append("--skip-human")
+    if not cfg.get("post_comment", True):
+        args.append("--no-post")
+    return main(args)
+
+
+def run_pass(cfg: dict, session_root: Path, dry_run: bool = False,
+             gh=run_gh) -> int:
+    """One poll pass over all configured repos. Returns count of dispatched."""
+    dispatched = 0
+    for repo_ref in cfg["repos"]:
+        owner, repo = repo_ref.split("/")
+        try:
+            prs = fetch_open_prs(owner, repo, gh=gh)
+        except RuntimeError as e:
+            print(f"POLL-ERROR {owner}/{repo}: {e}", file=sys.stderr)
+            continue
+        plans = plan_reviews(session_root, owner, repo, prs,
+                             drafts=cfg.get("drafts", False))
+        for plan in plans:
+            n = plan["pr"]
+            line = f"{plan['decision']} {owner}/{repo}#{n}"
+            if plan["decision"] == "SKIP":
+                print(line)
+                continue
+            if dry_run:
+                print(f"[dry-run] would review: {line}")
+                dispatched += 1
+                continue
+            session_dir = session_root / owner / repo / f"pr-{n}"
+            if plan["decision"] == "RE-RUN":
+                _clean_rerun_session(session_dir)
+            print(line)
+            try:
+                code = _dispatch(cfg, owner, repo, n, plan["head_sha"])
+            except (RuntimeError, ValueError, OSError) as e:
+                print(f"FAILED {owner}/{repo}#{n}: {e}", file=sys.stderr)
+                continue
+            if code != 0:
+                print(f"FAILED {owner}/{repo}#{n}: exit {code}", file=sys.stderr)
+                continue
+            dispatched += 1
+    return dispatched
+
+
+def main(argv: list[str] | None = None) -> int:
+    parser = argparse.ArgumentParser(prog="autoreview")
+    parser.add_argument("--once", action="store_true", help="single pass")
+    parser.add_argument("--daemon", action="store_true", help="loop forever")
+    parser.add_argument("--dry-run", action="store_true",
+                        help="print plans without dispatching")
+    parser.add_argument("--config", type=Path, default=CONFIG_PATH,
+                        help="path to autoreview.yml")
+    args = parser.parse_args(argv)
+
+    cfg = load_config(args.config)
+    env = load_env_config()
+    if not env.api_key:
+        print("DEEPSEEK_API_KEY not set (see .env.example)", file=sys.stderr)
+        return 3
+    if not gh_available():
+        print("gh CLI not installed or not authenticated (gh auth login)",
+              file=sys.stderr)
+        return 2
+
+    session_root = env.session_root
+    while True:
+        if not _acquire_lock():
+            print("another autoreview process is running — exiting",
+                  file=sys.stderr)
+            return 1
+        try:
+            run_pass(cfg, session_root, dry_run=args.dry_run)
+        finally:
+            _release_lock()
+        if args.once or args.dry_run:
+            return 0
+        time.sleep(cfg["interval_minutes"] * 60)
+
+
+if __name__ == "__main__":
+    sys.exit(main())
