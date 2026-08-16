@@ -49,16 +49,16 @@ human ever looks at it.</p>
 </ul>
 
 <h2>Step 1 — Install</h2>
-<p>Requirements: Python 3.10+, the GitHub CLI (<code>gh</code>) already
-authenticated, and a DeepSeek API key.</p>
-<pre><code>git clone https://github.com/nexpeakcore/deepseek-harness-pr-review.git
-cd deepseek-harness-pr-review
-python -m venv .venv && . .venv/bin/activate
-pip install -e '.[dev]'
+<p>Requirements: Python 3.10+ (auto-detected by the installer), the GitHub CLI
+(<code>gh</code>) already authenticated, and a DeepSeek API key. One command
+installs everything into an isolated venv:</p>
+<pre><code>curl -fsSL https://raw.githubusercontent.com/nexpeakcore/deepseek-harness-pr-review/main/scripts/install.sh | bash
 export DEEPSEEK_API_KEY=sk-...</code></pre>
+<p>Or install manually with pip: <code>pip install git+https://github.com/nexpeakcore/deepseek-harness-pr-review.git</code></p>
 
 <h2>Step 2 — Review one PR</h2>
-<pre><code>python -m src.run owner/repo 123</code></pre>
+<pre><code>harness-pr-review https://github.com/owner/repo/pull/123
+# or: harness-pr-review owner/repo 123</code></pre>
 <p>This runs the full 5-phase pipeline: snapshot the PR from GitHub, split the
 description into claims, deep-dive the code with a DeepSeek Harness agent,
 ask confirmation questions only when uncertain, and write an English report
@@ -74,7 +74,7 @@ repos:
   your-repo: auto
 
 # run the poller (or use launchd/cron to run it every 2 minutes)
-python -m src.autoreview --daemon</code></pre>
+autoreview --daemon</code></pre>
 
 <h2>Step 4 — See the results</h2>
 <p>The web dashboard shows per-repo KPIs: PRs reviewed, bugs found,
