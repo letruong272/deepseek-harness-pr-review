@@ -214,10 +214,13 @@ def open_prs(session_root: Path, owner: str, repo: str, gh=None) -> list[dict]:
                 "unavailable": unavailable,
             })
         elif d.exists():
+            info = review_process_info(d)
             rows.append({
                 "pr": n, "title": p.get("title", ""),
                 "draft": bool(p.get("draft")),
                 "status": "reviewing", "rounds": None,
+                "pid": info["pid"] if info else None,
+                "started_at": info["started_at"] if info else None,
                 "bugs": None, "doc_errors": None,
                 "unavailable": unavailable,
             })
@@ -249,3 +252,33 @@ def open_prs(session_root: Path, owner: str, repo: str, gh=None) -> list[dict]:
 
     rows.sort(key=lambda r: r["pr"], reverse=True)
     return rows
+
+
+def review_process_info(session_dir: Path) -> dict | None:
+    """PID + started_at of a running review, or None if not running/stale.
+
+    Reads session_dir/review.lock (JSON {pid, started_at}); lock without a
+    live PID is treated as stale (not running).
+    """
+    lock = session_dir / "review.lock"
+    if not lock.exists():
+        return None
+    try:
+        import json as _json
+
+        meta = _json.loads(lock.read_text())
+        pid = int(meta.get("pid", 0))
+        started_at = meta.get("started_at", "")
+    except (ValueError, OSError, _json.JSONDecodeError):
+        return None
+    if pid <= 0:
+        return None
+    try:
+        import os as _os
+
+        _os.kill(pid, 0)
+    except ProcessLookupError:
+        return None
+    except PermissionError:
+        pass
+    return {"pid": pid, "started_at": started_at}

@@ -1,6 +1,7 @@
 """FastAPI app: PR review dashboard + repo auto/manual config management."""
 import json
 import os
+import time
 from pathlib import Path
 
 from fastapi import FastAPI, HTTPException, Request
@@ -197,6 +198,71 @@ def _review_lock_path(session_root: Path, owner: str, repo: str, n: int) -> Path
     return session_root / owner / repo / f"pr-{n}" / "review.lock"
 
 
+def _write_review_lock(lock: Path) -> None:
+    """Atomically create the review lock with pid + started_at metadata."""
+    data = json.dumps({"pid": os.getpid(),
+                       "started_at": time.strftime("%Y-%m-%dT%H:%M:%S")})
+    fd = os.open(lock, os.O_CREAT | os.O_EXCL | os.O_WRONLY)
+    try:
+        os.write(fd, data.encode())
+    finally:
+        os.close(fd)
+
+
+def review_status(session_root: Path, owner: str, repo: str, n: int) -> dict:
+    """Lock metadata if the review process is alive; stale flag if PID dead."""
+    lock = _review_lock_path(session_root, owner, repo, n)
+    if not lock.exists():
+        return {"running": False, "stale": False}
+    try:
+        meta = json.loads(lock.read_text())
+        pid = int(meta.get("pid", 0))
+    except (json.JSONDecodeError, OSError, ValueError):
+        pid = 0
+    if pid > 0 and _pid_alive(pid):
+        started_at = meta.get("started_at", "")
+        elapsed = None
+        try:
+            from datetime import datetime
+
+            started = datetime.strptime(started_at, "%Y-%m-%dT%H:%M:%S")
+            elapsed = int((datetime.now() - started).total_seconds())
+        except ValueError:
+            pass
+        return {"running": True, "pid": pid, "started_at": started_at,
+                "elapsed_seconds": elapsed}
+    return {"running": False, "stale": True}
+
+
+def _pid_alive(pid: int) -> bool:
+    try:
+        os.kill(pid, 0)
+        return True
+    except ProcessLookupError:
+        return False
+    except PermissionError:
+        return True
+
+
+@app.get("/api/repos/{owner}/{repo}/pr/{pr}/review/status")
+def review_status_api(owner: str, repo: str, pr: int):
+    return review_status(_session_root(), owner, repo, pr)
+
+
+@app.get("/api/repos/{owner}/{repo}/pr/{pr}/review/log")
+def review_log_api(owner: str, repo: str, pr: int, lines: int = 200):
+    path = _session_root() / owner / repo / f"pr-{pr}" / "review.log"
+    log_text = ""
+    if path.exists():
+        try:
+            log_text = "\n".join(path.read_text(errors="replace")
+                                 .splitlines()[-max(1, min(lines, 2000)):])
+        except OSError:
+            log_text = ""
+    return {"log": log_text,
+            "running": review_status(_session_root(), owner, repo, pr)["running"]}
+
+
 @app.post("/api/repos/{owner}/{repo}/pr/{pr}/review")
 def trigger_review(owner: str, repo: str, pr: int):
     """Run a review synchronously using the repo's autoreview config."""
@@ -215,18 +281,37 @@ def trigger_review(owner: str, repo: str, pr: int):
 
     lock = _review_lock_path(_session_root(), owner, repo, pr)
     lock.parent.mkdir(parents=True, exist_ok=True)
+    if lock.exists() and review_status(_session_root(), owner, repo, pr)["running"]:
+        status = review_status(_session_root(), owner, repo, pr)
+        raise HTTPException(
+            status_code=409,
+            detail=(f"review already running — PID {status['pid']}, "
+                    f"started {status['started_at']} "
+                    f"({status['elapsed_seconds']}s ago)"))
+    if lock.exists():  # stale lock → dọn và chạy lại
+        try:
+            lock.unlink()
+        except OSError:
+            pass
     try:
-        lock.touch(exist_ok=False)
+        _write_review_lock(lock)
     except FileExistsError:
         raise HTTPException(status_code=409,
                             detail=f"review already running for #{pr}")
+
+    import contextlib
+
+    log_path = lock.parent / "review.log"
     try:
-        args = [f"{owner}/{repo}", str(pr), "--force"]
-        if cfg.get("skip_human", True):
-            args.append("--skip-human")
-        if not cfg.get("post_comment", True):
-            args.append("--no-post")
-        exit_code = run_main(args)
+        with open(log_path, "w") as logf:
+            with contextlib.redirect_stdout(logf), \
+                    contextlib.redirect_stderr(logf):
+                args = [f"{owner}/{repo}", str(pr), "--force"]
+                if cfg.get("skip_human", True):
+                    args.append("--skip-human")
+                if not cfg.get("post_comment", True):
+                    args.append("--no-post")
+                exit_code = run_main(args)
     finally:
         try:
             lock.unlink()

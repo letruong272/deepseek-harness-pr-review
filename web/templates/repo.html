@@ -33,7 +33,7 @@
         {% if p.status == 'reviewed' %}
           <span class="verdict v-pass">Reviewed · {{ p.rounds }} round{{ 's' if p.rounds != 1 }}</span>
         {% elif p.status == 'reviewing' %}
-          <span class="verdict v-partial">Reviewing…</span>
+          <span class="verdict v-partial">Reviewing…{% if p.pid %} (PID {{ p.pid }}{% if p.started_at %}, started {{ p.started_at }}{% endif %}){% endif %}</span>
         {% else %}
           <span class="verdict v-unlisted">Not reviewed</span>
         {% endif %}
@@ -49,11 +49,43 @@
                 onclick="triggerReview({{ p.pr }}, this)">
           {% if p.status == 'reviewed' %}Re-review{% else %}Review now{% endif %}
         </button>
+        <div id="review-msg-{{ p.pr }}" class="review-msg"></div>
       </td>
     </tr>
   {% endfor %}
   </tbody>
 </table>
+
+{% for p in pr_rows %}
+{% if p.status == 'reviewing' %}
+<div class="config-block review-log-panel" id="log-panel-{{ p.pr }}">
+  <h2>Review log — PR #{{ p.pr }}</h2>
+  <pre id="review-log-{{ p.pr }}" class="review-log">loading…</pre>
+</div>
+<script>
+(function() {
+  const pr = {{ p.pr }};
+  const pre = document.getElementById("review-log-" + pr);
+  const panel = document.getElementById("log-panel-" + pr);
+  let timer;
+  async function refresh() {
+    try {
+      const r = await fetch(`/api/repos/{{ repo.owner }}/{{ repo.repo }}/pr/${pr}/review/log?lines=200`);
+      const data = await r.json();
+      pre.textContent = data.log || "(no output yet)";
+      if (data.running) {
+        timer = setTimeout(refresh, 3000);
+      } else {
+        clearTimeout(timer);
+        setTimeout(() => location.reload(), 5000);
+      }
+    } catch (e) { timer = setTimeout(refresh, 3000); }
+  }
+  refresh();
+})();
+</script>
+{% endif %}
+{% endfor %}
 
 <script>
 const verdictData = {{ verdict_json | safe }};
@@ -74,12 +106,20 @@ async function triggerReview(pr, btn) {
   btn.disabled = true;
   const original = btn.textContent;
   btn.textContent = "Running…";
+  const msgEl = document.getElementById("review-msg-" + pr);
   try {
     const r = await fetch(`/api/repos/{{ repo.owner }}/{{ repo.repo }}/pr/${pr}/review`,
                           {method: "POST"});
     if (!r.ok) {
       const data = await r.json().catch(() => ({}));
-      alert(data.detail || "review failed");
+      if (r.status === 409 && data.detail) {
+        if (msgEl) {
+          msgEl.textContent = data.detail;
+          msgEl.className = "review-msg warn";
+        }
+      } else {
+        alert(data.detail || "review failed");
+      }
       btn.textContent = original;
       btn.disabled = false;
       return;

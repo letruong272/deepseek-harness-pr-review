@@ -1,5 +1,6 @@
 # tests/test_server.py
 import json
+import os
 
 import pytest
 from fastapi.testclient import TestClient
@@ -227,6 +228,7 @@ def test_trigger_review_ok(tmp_path, monkeypatch):
 
 def test_trigger_review_no_post_config(tmp_path, monkeypatch):
     monkeypatch.setenv("DEEPSEEK_API_KEY", "sk-test")
+    monkeypatch.setenv("DSH_SESSION_ROOT", str(tmp_path / "sessions"))
     cfg_path = tmp_path / "autoreview.yml"
     cfg_path.write_text("org: nexpeakcore\nrepos:\n  sample-app: auto\n"
                         "post_comment: false\nskip_human: false\n")
@@ -246,6 +248,7 @@ def test_trigger_review_no_post_config(tmp_path, monkeypatch):
 
 
 def test_trigger_review_missing_key(tmp_path, monkeypatch):
+    monkeypatch.delenv("DEEPSEEK_API_KEY", raising=False)
     cfg_path = tmp_path / "autoreview.yml"
     cfg_path.write_text("org: nexpeakcore\nrepos:\n  sample-app: auto\n")
     monkeypatch.setenv("AUTOREVIEW_CONFIG", str(cfg_path))
@@ -258,6 +261,7 @@ def test_trigger_review_missing_key(tmp_path, monkeypatch):
 
 def test_trigger_review_error_500(tmp_path, monkeypatch):
     monkeypatch.setenv("DEEPSEEK_API_KEY", "sk-test")
+    monkeypatch.setenv("DSH_SESSION_ROOT", str(tmp_path / "sessions"))
     cfg_path = tmp_path / "autoreview.yml"
     cfg_path.write_text("org: nexpeakcore\nrepos:\n  sample-app: auto\n")
     monkeypatch.setenv("AUTOREVIEW_CONFIG", str(cfg_path))
@@ -270,6 +274,7 @@ def test_trigger_review_error_500(tmp_path, monkeypatch):
 
 def test_trigger_review_concurrent_409(tmp_path, monkeypatch):
     monkeypatch.setenv("DEEPSEEK_API_KEY", "sk-test")
+    monkeypatch.setenv("DSH_SESSION_ROOT", str(tmp_path / "sessions"))
     cfg_path = tmp_path / "autoreview.yml"
     cfg_path.write_text("org: nexpeakcore\nrepos:\n  sample-app: auto\n")
     monkeypatch.setenv("AUTOREVIEW_CONFIG", str(cfg_path))
@@ -278,11 +283,60 @@ def test_trigger_review_concurrent_409(tmp_path, monkeypatch):
     lock = tmp_path / "sessions" / "nexpeakcore" / "sample-app" / "pr-78" \
         / "review.lock"
     lock.parent.mkdir(parents=True)
-    lock.touch()
+    lock.write_text(json.dumps({"pid": os.getpid(), "started_at": "2026-08-16T10:00:00"}))
     client = TestClient(app)
     r = client.post("/api/repos/sample-org/sample-app/pr/78/review")
     assert r.status_code == 409
     assert "already running" in r.json()["detail"]
+    assert "PID" in r.json()["detail"]
+
+
+def test_review_status_api_running(tmp_path, monkeypatch):
+    monkeypatch.setenv("DSH_SESSION_ROOT", str(tmp_path / "sessions"))
+    lock = tmp_path / "sessions" / "nexpeakcore" / "sample-app" / "pr-78" \
+        / "review.lock"
+    lock.parent.mkdir(parents=True)
+    lock.write_text(json.dumps({"pid": os.getpid(), "started_at": "2026-08-16T10:00:00"}))
+    client = TestClient(app)
+    r = client.get("/api/repos/sample-org/sample-app/pr/78/review/status")
+    assert r.status_code == 200
+    data = r.json()
+    assert data["running"] is True
+    assert data["pid"] == os.getpid()
+
+
+def test_review_status_api_stale(tmp_path, monkeypatch):
+    monkeypatch.setenv("DSH_SESSION_ROOT", str(tmp_path / "sessions"))
+    lock = tmp_path / "sessions" / "nexpeakcore" / "sample-app" / "pr-78" \
+        / "review.lock"
+    lock.parent.mkdir(parents=True)
+    lock.write_text(json.dumps({"pid": 999999, "started_at": "2026-08-16T10:00:00"}))
+    client = TestClient(app)
+    r = client.get("/api/repos/sample-org/sample-app/pr/78/review/status")
+    assert r.status_code == 200
+    assert r.json()["running"] is False
+    assert r.json()["stale"] is True
+
+
+def test_review_log_api(tmp_path, monkeypatch):
+    monkeypatch.setenv("DSH_SESSION_ROOT", str(tmp_path / "sessions"))
+    session_dir = tmp_path / "sessions" / "nexpeakcore" / "sample-app" / "pr-78"
+    session_dir.mkdir(parents=True)
+    (session_dir / "review.log").write_text("line1\nline2\nline3\n")
+    client = TestClient(app)
+    r = client.get("/api/repos/sample-org/sample-app/pr/78/review/log?lines=2")
+    assert r.status_code == 200
+    data = r.json()
+    assert data["log"] == "line2\nline3"
+    assert data["running"] is False
+
+
+def test_review_log_api_missing(tmp_path, monkeypatch):
+    monkeypatch.setenv("DSH_SESSION_ROOT", str(tmp_path / "sessions"))
+    client = TestClient(app)
+    r = client.get("/api/repos/sample-org/sample-app/pr/78/review/log")
+    assert r.status_code == 200
+    assert r.json() == {"log": "", "running": False}
 
 
 def test_repo_page_has_review_buttons(client, monkeypatch):

@@ -12,6 +12,11 @@
   claim-level verification, docs reality-check and requirement impact.</p>
   <button class="tab-btn review-btn" id="review-now-btn"
           onclick="triggerReview({{ pr_info.pr }}, this)">Review now</button>
+  <div id="review-msg" class="review-msg"></div>
+</div>
+<div class="config-block review-log-panel" id="log-panel" style="display:none">
+  <h2>Review log</h2>
+  <pre id="review-log" class="review-log">loading…</pre>
 </div>
 {% else %}
 <h1>PR #{{ detail.pr.pr }} — {{ detail.title }}</h1>
@@ -118,12 +123,23 @@ async function triggerReview(pr, btn) {
   btn.disabled = true;
   const original = btn.textContent;
   btn.textContent = "Running…";
+  const msgEl = document.getElementById("review-msg");
+  const panel = document.getElementById("log-panel");
+  const pre = document.getElementById("review-log");
+  if (panel) panel.style.display = "block";
   try {
     const r = await fetch(`/api/repos/{{ repo_owner }}/{{ repo_name }}/pr/${pr}/review`,
                           {method: "POST"});
     if (!r.ok) {
       const data = await r.json().catch(() => ({}));
-      alert(data.detail || "review failed");
+      if (r.status === 409 && data.detail) {
+        if (msgEl) {
+          msgEl.textContent = data.detail;
+          msgEl.className = "review-msg warn";
+        }
+      } else {
+        alert(data.detail || "review failed");
+      }
       btn.textContent = original;
       btn.disabled = false;
       return;
@@ -135,5 +151,29 @@ async function triggerReview(pr, btn) {
     btn.disabled = false;
   }
 }
+
+{% if not_reviewed %}
+(function() {
+  const pr = {{ pr_info.pr }};
+  const pre = document.getElementById("review-log");
+  const panel = document.getElementById("log-panel");
+  let timer;
+  async function refresh() {
+    try {
+      const r = await fetch(`/api/repos/{{ repo_owner }}/{{ repo_name }}/pr/${pr}/review/log?lines=200`);
+      const data = await r.json();
+      pre.textContent = data.log || "(no output yet)";
+      if (data.running) {
+        panel.style.display = "block";
+        timer = setTimeout(refresh, 3000);
+      } else {
+        clearTimeout(timer);
+        panel.style.display = "none";
+      }
+    } catch (e) { timer = setTimeout(refresh, 3000); }
+  }
+  refresh();
+})();
+{% endif %}
 </script>
 {% endblock %}
