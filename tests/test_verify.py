@@ -27,6 +27,36 @@ def test_setup_workspace_clones_and_checks_out(tmp_path):
     assert (ws / "app.py").read_text() == "print('feature')\n"
 
 
+def test_setup_workspace_rerun_existing_checkout(tmp_path):
+    # Workspace đã tồn tại + branch pr-7 đang checkout → re-review phải thành công
+    origin = tmp_path / "origin"
+    origin.mkdir()
+    subprocess.run(["git", "init", "-q", "-b", "main"], cwd=origin, check=True)
+    (origin / "app.py").write_text("print('base')\n")
+    subprocess.run(["git", "add", "."], cwd=origin, check=True)
+    subprocess.run(["git", "-c", "user.email=t@t", "-c", "user.name=t",
+                    "commit", "-qm", "base"], cwd=origin, check=True)
+    subprocess.run(["git", "checkout", "-q", "-b", "pull/7/head"], cwd=origin, check=True)
+    (origin / "app.py").write_text("print('feature')\n")
+    subprocess.run(["git", "-c", "user.email=t@t", "-c", "user.name=t",
+                    "commit", "-qam", "feat"], cwd=origin, check=True)
+    subprocess.run(["git", "checkout", "-q", "main"], cwd=origin, check=True)
+
+    ws = tmp_path / "ws"
+    setup_workspace("demo", "app", 7, ws, remote_url=str(origin))  # lần 1
+    assert (ws / "app.py").read_text() == "print('feature')\n"
+
+    # push thêm commit mới lên nhánh PR rồi re-run
+    subprocess.run(["git", "checkout", "-q", "pull/7/head"], cwd=origin, check=True)
+    (origin / "app.py").write_text("print('feature v2')\n")
+    subprocess.run(["git", "-c", "user.email=t@t", "-c", "user.name=t",
+                    "commit", "-qam", "feat2"], cwd=origin, check=True)
+    subprocess.run(["git", "checkout", "-q", "main"], cwd=origin, check=True)
+
+    setup_workspace("demo", "app", 7, ws, remote_url=str(origin))  # re-review
+    assert (ws / "app.py").read_text() == "print('feature v2')\n"
+
+
 def test_parse_findings_ok(tmp_path):
     f = tmp_path / "findings.json"
     f.write_text(json.dumps({"claims": [{"id": "C1", "status": "PASS",

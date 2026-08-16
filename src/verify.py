@@ -34,8 +34,10 @@ def setup_workspace(owner: str, repo: str, n: int, workspace: Path,
         url = remote_url or f"https://github.com/{owner}/{repo}.git"
         _run_git(["clone", "--no-checkout", url, str(workspace)], workspace.parent)
     branch = f"pr-{n}"
-    _run_git(["fetch", "origin", f"pull/{n}/head:{branch}"], workspace)
-    _run_git(["checkout", "-f", branch], workspace)
+    # fetch vào FETCH_HEAD (không dùng refspec :branch — git từ chối fetch
+    # vào branch đang checkout khi re-review); checkout -B force-reset branch
+    _run_git(["fetch", "origin", f"pull/{n}/head"], workspace)
+    _run_git(["checkout", "-B", branch, "FETCH_HEAD"], workspace)
 
 
 def build_verify_prompt(snapshot: dict, claims: list[dict]) -> str:
