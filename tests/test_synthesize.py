@@ -45,14 +45,32 @@ def test_build_comment_en_has_marker_and_verdict():
     assert "STILL_VALID" in comment
 
 
-def test_post_comment_skips_if_marker_exists(monkeypatch):
-    existing = [{"body": "<!-- harness-pr-review --> old"}]
-    calls = []
+def test_build_comment_embeds_full_report(tmp_path):
+    report = build_report(SNAPSHOT, CLAIMS, FINDINGS, ANSWERS, tmp_path)
+    comment = build_comment(SNAPSHOT, CLAIMS, FINDINGS, ANSWERS,
+                            report_content=report)
+    assert "<!-- harness-pr-review -->" in comment
+    assert "<summary>Full report" in comment
+    assert "## Verdict" in comment
+    assert "REQ-1" in comment
+    assert "ĐÚNG" in comment
+
+
+def test_post_comment_updates_via_gh(monkeypatch):
+    existing = [{"id": 42, "body": "<!-- harness-pr-review --> old"}]
+    seen = []
     monkeypatch.setattr("synthesize.run_gh",
                         lambda args, **kw: (existing if "GET" in args else None))
-    posted = post_comment("demo", "app", 7, "new", gh=lambda args, **kw: None,
+
+    def fake_gh(args, **kw):
+        seen.append(args)
+        return {"id": 42}
+
+    posted = post_comment("demo", "app", 7, "new", gh=fake_gh,
                           list_comments=lambda: existing)
     assert posted is False
+    assert seen == [["api", "repos/demo/app/issues/comments/42",
+                     "-X", "PATCH", "-f", "body=new"]]
 
 
 def test_post_comment_posts_when_no_marker(monkeypatch):

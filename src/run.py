@@ -111,16 +111,17 @@ def main(argv: list[str] | None = None) -> int:
 
         snapshot = json.loads((session_dir / "snapshot.json").read_text())
         claims = json.loads((session_dir / "claims.json").read_text())
-        build_report(snapshot, claims, findings, answers, session_dir)
+        report = build_report(snapshot, claims, findings, answers, session_dir)
         print(f"Report: {session_dir / 'report.md'}")
 
         if args.dry_run or args.fixtures is not None or args.no_post:
             return 0
-        body = build_comment(snapshot, claims, findings, answers)
+        body = build_comment(snapshot, claims, findings, answers,
+                             report_content=report)
         if post_comment(owner, repo, int(num), body):
             print("Đã post comment lên PR.")
         else:
-            print("Comment đã tồn tại (có marker) — bỏ qua.")
+            print("Comment đã tồn tại — đã cập nhật full report lên PR.")
         return 0
     except (RuntimeError, ValueError, OSError) as e:
         print(f"Lỗi: {e}", file=sys.stderr)

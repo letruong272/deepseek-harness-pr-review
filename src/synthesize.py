@@ -86,9 +86,19 @@ def build_report(snapshot: dict, claims: list[dict], findings: dict,
 
 
 def build_comment(snapshot: dict, claims: list[dict], findings: dict,
-                  answers: list[dict]) -> str:
-    """Xây comment tiếng Anh (1 lần duy nhất, có marker)."""
+                  answers: list[dict], report_content: str | None = None) -> str:
+    """Xây comment tiếng Anh (1 lần duy nhất, có marker).
+
+    Nếu report_content được truyền, comment chứa toàn bộ report (đủ thông tin
+    để đọc trực tiếp trên PR); ngược lại chỉ là tóm tắt.
+    """
     verdict = _overall_verdict(findings)
+    if report_content:
+        return (
+            f"## Harness PR Review — Verdict: {verdict}\n\n"
+            f"<details open>\n\n<summary>Full report (tiếng Việt)</summary>\n\n"
+            f"{report_content}\n\n</details>\n\n{MARKER}"
+        )
     claim_lines = "\n".join(
         f"- {c['id']}: {c['status']}" for c in findings.get("claims", []))
     doc_lines = "\n".join(
@@ -111,11 +121,16 @@ def build_comment(snapshot: dict, claims: list[dict], findings: dict,
 
 def post_comment(owner: str, repo: str, n: int, body: str, *,
                  gh=run_gh, list_comments=None) -> bool:
-    """Post comment nếu chưa có marker. Trả về True nếu đã post."""
+    """Post comment nếu chưa có marker; ngược lại UPDATE comment cũ (giữ 1 comment duy nhất).
+
+    Trả về True nếu tạo mới, False nếu đã update comment cũ.
+    """
     if list_comments is None:
         list_comments = lambda: gh(["api", f"repos/{owner}/{repo}/issues/{n}/comments", "--paginate"])
     for c in list_comments():
         if MARKER in c.get("body", ""):
+            gh(["api", f"repos/{owner}/{repo}/issues/comments/{c['id']}",
+                "-X", "PATCH", "-f", f"body={body}"])
             return False
     gh(["api", f"repos/{owner}/{repo}/issues/{n}/comments",
         "-f", f"body={body}"])
