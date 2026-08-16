@@ -199,3 +199,87 @@ def test_repo_page_gh_failure_badge(client, tmp_path, monkeypatch):
     resp = client.get("/repos/sample-org/sample-app")
     assert resp.status_code == 200
     assert "open PRs unavailable" in resp.text
+
+
+def test_trigger_review_ok(tmp_path, monkeypatch):
+    monkeypatch.setenv("DEEPSEEK_API_KEY", "sk-test")
+    cfg_path = tmp_path / "autoreview.yml"
+    cfg_path.write_text("org: nexpeakcore\nrepos:\n  sample-app: auto\n")
+    monkeypatch.setenv("AUTOREVIEW_CONFIG", str(cfg_path))
+    monkeypatch.setenv("DSH_SESSION_ROOT", str(tmp_path / "sessions"))
+    calls = []
+
+    def fake_main(argv):
+        calls.append(argv)
+        return 0
+
+    monkeypatch.setattr("web.server.run_main", fake_main)
+    client = TestClient(app)
+    r = client.post("/api/repos/sample-org/sample-app/pr/78/review")
+    assert r.status_code == 200
+    assert r.json()["ok"] is True
+    args = calls[0]
+    assert "sample-org/sample-app" in args and "78" in args
+    assert "--force" in args
+    assert "--skip-human" in args       # config mặc định skip_human: true
+    assert "--no-post" not in args      # config mặc định post_comment: true
+
+
+def test_trigger_review_no_post_config(tmp_path, monkeypatch):
+    monkeypatch.setenv("DEEPSEEK_API_KEY", "sk-test")
+    cfg_path = tmp_path / "autoreview.yml"
+    cfg_path.write_text("org: nexpeakcore\nrepos:\n  sample-app: auto\n"
+                        "post_comment: false\nskip_human: false\n")
+    monkeypatch.setenv("AUTOREVIEW_CONFIG", str(cfg_path))
+    calls = []
+
+    def fake_main(argv):
+        calls.append(argv)
+        return 0
+
+    monkeypatch.setattr("web.server.run_main", fake_main)
+    client = TestClient(app)
+    r = client.post("/api/repos/sample-org/sample-app/pr/78/review")
+    assert r.status_code == 200
+    assert "--no-post" in calls[0]
+    assert "--skip-human" not in calls[0]
+
+
+def test_trigger_review_missing_key(tmp_path, monkeypatch):
+    cfg_path = tmp_path / "autoreview.yml"
+    cfg_path.write_text("org: nexpeakcore\nrepos:\n  sample-app: auto\n")
+    monkeypatch.setenv("AUTOREVIEW_CONFIG", str(cfg_path))
+    monkeypatch.setattr("web.server.run_main", lambda argv: 3)  # thiếu API key
+    client = TestClient(app)
+    r = client.post("/api/repos/sample-org/sample-app/pr/78/review")
+    assert r.status_code == 400
+    assert "DEEPSEEK_API_KEY" in r.json()["detail"]
+
+
+def test_trigger_review_error_500(tmp_path, monkeypatch):
+    monkeypatch.setenv("DEEPSEEK_API_KEY", "sk-test")
+    cfg_path = tmp_path / "autoreview.yml"
+    cfg_path.write_text("org: nexpeakcore\nrepos:\n  sample-app: auto\n")
+    monkeypatch.setenv("AUTOREVIEW_CONFIG", str(cfg_path))
+    monkeypatch.setattr("web.server.run_main", lambda argv: 2)  # gh lỗi
+    client = TestClient(app)
+    r = client.post("/api/repos/sample-org/sample-app/pr/78/review")
+    assert r.status_code == 500
+    assert "review failed" in r.json()["detail"]
+
+
+def test_trigger_review_concurrent_409(tmp_path, monkeypatch):
+    monkeypatch.setenv("DEEPSEEK_API_KEY", "sk-test")
+    cfg_path = tmp_path / "autoreview.yml"
+    cfg_path.write_text("org: nexpeakcore\nrepos:\n  sample-app: auto\n")
+    monkeypatch.setenv("AUTOREVIEW_CONFIG", str(cfg_path))
+    monkeypatch.setenv("DSH_SESSION_ROOT", str(tmp_path / "sessions"))
+    monkeypatch.setattr("web.server.run_main", lambda argv: 0)
+    lock = tmp_path / "sessions" / "nexpeakcore" / "sample-app" / "pr-78" \
+        / "review.lock"
+    lock.parent.mkdir(parents=True)
+    lock.touch()
+    client = TestClient(app)
+    r = client.post("/api/repos/sample-org/sample-app/pr/78/review")
+    assert r.status_code == 409
+    assert "already running" in r.json()["detail"]

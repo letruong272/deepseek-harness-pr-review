@@ -11,6 +11,7 @@ from fastapi.templating import Jinja2Templates
 from autoreview_config import load_config as load_autoreview_config
 from autoreview_config import list_repos, remove_repo, set_repo_mode
 from config import load_config
+from run import main as run_main
 from web import metrics
 
 BASE = Path(__file__).resolve().parent
@@ -155,6 +156,55 @@ def api_remove_repo(repo: str):
     except (ValueError, OSError) as e:
         raise HTTPException(status_code=400, detail=str(e))
     return {"ok": True, "repo": repo}
+
+
+def _review_lock_path(session_root: Path, owner: str, repo: str, n: int) -> Path:
+    return session_root / owner / repo / f"pr-{n}" / "review.lock"
+
+
+@app.post("/api/repos/{owner}/{repo}/pr/{pr}/review")
+def trigger_review(owner: str, repo: str, pr: int):
+    """Run a review synchronously using the repo's autoreview config."""
+    cfg_path = _config_path()
+    if not cfg_path.exists():
+        raise HTTPException(status_code=404, detail="autoreview.yml not found")
+    try:
+        cfg = load_autoreview_config(cfg_path)
+    except (ValueError, OSError) as e:
+        raise HTTPException(status_code=400, detail=f"invalid config: {e}")
+
+    env = load_config()
+    if not env.api_key:
+        raise HTTPException(status_code=400,
+                            detail="DEEPSEEK_API_KEY not set (see .env.example)")
+
+    lock = _review_lock_path(_session_root(), owner, repo, pr)
+    lock.parent.mkdir(parents=True, exist_ok=True)
+    try:
+        lock.touch(exist_ok=False)
+    except FileExistsError:
+        raise HTTPException(status_code=409,
+                            detail=f"review already running for #{pr}")
+    try:
+        args = [f"{owner}/{repo}", str(pr), "--force"]
+        if cfg.get("skip_human", True):
+            args.append("--skip-human")
+        if not cfg.get("post_comment", True):
+            args.append("--no-post")
+        exit_code = run_main(args)
+    finally:
+        try:
+            lock.unlink()
+        except FileNotFoundError:
+            pass
+
+    if exit_code != 0:
+        raise HTTPException(
+            status_code=500,
+            detail=f"review failed (exit {exit_code}): "
+                   f"check server log / sessions/{owner}/{repo}/pr-{pr}/report.md")
+    return {"ok": True, "exit": exit_code,
+            "report": f"sessions/{owner}/{repo}/pr-{pr}/report.md"}
 
 
 if __name__ == "__main__":
