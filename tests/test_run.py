@@ -31,7 +31,18 @@ def test_main_fixtures_mode(tmp_path, monkeypatch):
 
 
 def test_main_requires_gh(tmp_path, monkeypatch):
+    monkeypatch.setenv("DEEPSEEK_API_KEY", "sk-test")
     monkeypatch.setattr("run.gh_available", lambda: False)
-    code = main(["demo/app", "7", "--fixtures", str(tmp_path / "nonexistent"),
-                 "--no-post"])
+    code = main(["demo/app", "7", "--no-post"])
     assert code == 2
+
+
+def test_main_owner_repo_hash_parsing(tmp_path, monkeypatch):
+    fixtures = tmp_path / "fixtures"
+    fixtures.mkdir()
+    for name, data in FIXTURES.items():
+        (fixtures / name).write_text(json.dumps(data))
+    monkeypatch.setenv("DSH_SESSION_ROOT", str(tmp_path / "sessions"))
+    code = main(["demo/app#7", "--fixtures", str(fixtures), "--no-post"])
+    assert code == 0
+    assert (tmp_path / "sessions" / "demo" / "app" / "pr-7" / "report.md").exists()

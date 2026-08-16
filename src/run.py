@@ -39,17 +39,17 @@ def main(argv: list[str] | None = None) -> int:
                              "(dùng cho e2e, bỏ qua gh & model)")
     args = parser.parse_args(argv)
 
-    if "#" in args.pr and args.number is None:
-        owner, repo = args.pr.split("/")[:2]
-        num = args.pr.split("#")[1]
-    else:
-        parts = args.pr.split("/")
-        if len(parts) != 2 or args.number is None:
-            print("usage: python -m src.run <owner>/<repo> <pr-number>",
-                  file=sys.stderr)
-            return 2
-        owner, repo = parts
-        num = str(args.number)
+    base = args.pr.split("#")[0]
+    parts = base.split("/")
+    if len(parts) != 2 or (args.number is None and "#" not in args.pr):
+        print("usage: python -m src.run <owner>/<repo> <pr-number>",
+              file=sys.stderr)
+        return 2
+    owner, repo = parts
+    num = str(args.number if args.number is not None else args.pr.split("#")[1])
+    if not num.isdigit():
+        print(f"PR number không hợp lệ: {num}", file=sys.stderr)
+        return 2
 
     cfg = load_config()
     if not cfg.api_key and args.fixtures is None:
@@ -62,50 +62,55 @@ def main(argv: list[str] | None = None) -> int:
     session_dir = cfg.session_root / owner / repo / f"pr-{num}"
     session_dir.mkdir(parents=True, exist_ok=True)
 
-    if args.fixtures is not None:
-        for name in ("snapshot.json", "claims.json", "findings.json"):
-            src = args.fixtures / name
-            if not src.exists():
-                print(f"fixture thiếu: {src}", file=sys.stderr)
-                return 2
-            (session_dir / name).write_text(src.read_text())
-        findings = json.loads((session_dir / "findings.json").read_text())
-    else:
-        from snapshot import build_snapshot
-        from claims import extract_claims
+    try:
+        if args.fixtures is not None:
+            for name in ("snapshot.json", "claims.json", "findings.json"):
+                src = args.fixtures / name
+                if not src.exists():
+                    print(f"fixture thiếu: {src}", file=sys.stderr)
+                    return 2
+                (session_dir / name).write_text(src.read_text())
+            findings = json.loads((session_dir / "findings.json").read_text())
+        else:
+            from snapshot import build_snapshot
+            from claims import extract_claims
 
-        snapshot = _load_or_skip("snapshot.json", session_dir, args.force)
-        if snapshot is None:
-            snapshot = build_snapshot(owner, repo, int(num), session_dir)
-        claims = _load_or_skip("claims.json", session_dir, args.force)
-        if claims is None:
-            claims = extract_claims(
-                snapshot, {"model": cfg.model, "api_key": cfg.api_key,
-                           "base_url": cfg.base_url}, session_dir)
-        workspace = session_dir / "workspace"
-        setup_workspace(owner, repo, int(num), workspace)
-        findings = _load_or_skip("findings.json", session_dir, args.force)
-        if findings is None:
-            findings = run_verify(
-                {"model": cfg.model}, workspace, session_dir, snapshot, claims)
+            snapshot = _load_or_skip("snapshot.json", session_dir, args.force)
+            if snapshot is None:
+                snapshot = build_snapshot(owner, repo, int(num), session_dir)
+            claims = _load_or_skip("claims.json", session_dir, args.force)
+            if claims is None:
+                claims = extract_claims(
+                    snapshot, {"model": cfg.model, "api_key": cfg.api_key,
+                               "base_url": cfg.base_url}, session_dir)
+            workspace = session_dir / "workspace"
+            setup_workspace(owner, repo, int(num), workspace)
+            findings = _load_or_skip("findings.json", session_dir, args.force)
+            if findings is None:
+                findings = run_verify(
+                    {"model": cfg.model}, workspace, session_dir, snapshot, claims)
 
-    answers = _load_or_skip("answers.json", session_dir, args.force)
-    if answers is None:
-        answers = run_gate(findings, session_dir, interactive=not args.skip_human)
+        answers = _load_or_skip("answers.json", session_dir, args.force)
+        if answers is None:
+            answers = run_gate(findings, session_dir,
+                               interactive=not args.skip_human)
 
-    snapshot = json.loads((session_dir / "snapshot.json").read_text())
-    claims = json.loads((session_dir / "claims.json").read_text())
-    build_report(snapshot, claims, findings, answers, session_dir)
-    print(f"Report: {session_dir / 'report.md'}")
+        snapshot = json.loads((session_dir / "snapshot.json").read_text())
+        claims = json.loads((session_dir / "claims.json").read_text())
+        build_report(snapshot, claims, findings, answers, session_dir)
+        print(f"Report: {session_dir / 'report.md'}")
 
-    if args.dry_run or args.fixtures is not None or args.no_post:
+        if args.dry_run or args.fixtures is not None or args.no_post:
+            return 0
+        body = build_comment(snapshot, claims, findings, answers)
+        if post_comment(owner, repo, int(num), body):
+            print("Đã post comment lên PR.")
+        else:
+            print("Comment đã tồn tại (có marker) — bỏ qua.")
         return 0
-    body = build_comment(snapshot, claims, findings, answers)
-    if post_comment(owner, repo, int(num), body):
-        print("Đã post comment lên PR.")
-    else:
-        print("Comment đã tồn tại (có marker) — bỏ qua.")
-    return 0
+    except RuntimeError as e:
+        print(f"Lỗi: {e}", file=sys.stderr)
+        return 1
 
 
 if __name__ == "__main__":
