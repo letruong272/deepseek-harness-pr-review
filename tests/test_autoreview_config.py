@@ -37,7 +37,7 @@ def test_load_config_missing_defaults(tmp_path):
 def test_validate_config_no_repos(tmp_path):
     p = tmp_path / "autoreview.yml"
     p.write_text("interval_minutes: 5\n")
-    with pytest.raises(ValueError, match="repos"):
+    with pytest.raises(ValueError, match="at least one repo"):
         validate_config(load_config(p))
 
 
