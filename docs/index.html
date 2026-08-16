@@ -3,143 +3,72 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>DeepSeek Harness PR Review — Headless PR review automation</title>
-<meta name="description" content="Headless PR review automation powered by DeepSeek Harness: verify PR descriptions claim-by-claim, docs reality-check, requirement impact analysis, human-in-the-loop.">
+<title>DeepSeek Harness PR Review</title>
+<meta name="description" content="Headless PR review: description verified claim-by-claim against real code, docs checked against reality, requirement impact flagged.">
 <style>
-  :root { --dark: #2c3e50; --accent: #4dabf7; --green: #27ae60; --orange: #b9770e; --red: #c0392b; }
-  * { box-sizing: border-box; margin: 0; padding: 0; }
-  body { font-family: -apple-system, "Segoe UI", Roboto, sans-serif; color: #1f2937; background: #f6f8fa; line-height: 1.6; }
-  a { color: var(--accent); text-decoration: none; }
-  a:hover { text-decoration: underline; }
-
-  .hero { background: linear-gradient(135deg, #1a2733, var(--dark)); color: #fff; padding: 72px 24px 64px; text-align: center; }
-  .hero h1 { font-size: 40px; font-weight: 800; letter-spacing: -0.5px; }
-  .hero .tagline { font-size: 18px; color: #bdc3c7; max-width: 640px; margin: 16px auto 28px; }
-  .hero .badge { display: inline-block; background: rgba(77,171,247,.15); color: var(--accent); border: 1px solid rgba(77,171,247,.4); border-radius: 999px; padding: 4px 14px; font-size: 13px; margin-bottom: 18px; }
-  .btn { display: inline-block; background: var(--accent); color: #fff; font-weight: 600; padding: 10px 22px; border-radius: 8px; margin: 0 6px; }
-  .btn.ghost { background: transparent; border: 1px solid #7f8c8d; color: #ecf0f1; }
-  .btn:hover { text-decoration: none; opacity: .9; }
-
-  .container { max-width: 1080px; margin: 0 auto; padding: 0 24px; }
-  section { padding: 56px 0; }
-  h2 { font-size: 26px; font-weight: 700; margin-bottom: 8px; }
-  .subtitle { color: #6b7280; margin-bottom: 32px; }
-
-  .phases { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 14px; }
-  .phase { background: #fff; border: 1px solid #e3e8ee; border-radius: 10px; padding: 18px; }
-  .phase .num { font-size: 12px; font-weight: 700; color: var(--accent); }
-  .phase h3 { font-size: 16px; margin: 6px 0 8px; }
-  .phase p { font-size: 13px; color: #4b5563; }
-
-  .shots { display: grid; grid-template-columns: repeat(auto-fit, minmax(420px, 1fr)); gap: 20px; }
-  .shot { background: #fff; border: 1px solid #e3e8ee; border-radius: 10px; overflow: hidden; }
-  .shot img { width: 100%; display: block; border-bottom: 1px solid #e3e8ee; }
-  .shot .cap { padding: 12px 16px; font-size: 14px; }
-  .shot .cap b { display: block; margin-bottom: 2px; }
-  .shot .cap span { color: #6b7280; font-size: 13px; }
-
-  .features { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 14px; }
-  .feature { background: #fff; border: 1px solid #e3e8ee; border-radius: 10px; padding: 18px; }
-  .feature h3 { font-size: 15px; margin-bottom: 6px; }
-  .feature p { font-size: 13px; color: #4b5563; }
-
-  pre { background: #1a2733; color: #dbeafe; padding: 18px; border-radius: 10px; overflow-x: auto; font-size: 13px; }
-  code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
-
-  footer { border-top: 1px solid #e3e8ee; padding: 28px 0; text-align: center; color: #6b7280; font-size: 13px; }
+body { margin: 0 auto; max-width: 680px; padding: 48px 20px 40px;
+       font-family: -apple-system, "Segoe UI", Roboto, sans-serif;
+       color: #1f2328; line-height: 1.6; }
+a { color: #0366d6; text-decoration: none; }
+a:hover { text-decoration: underline; }
+h1 { font-size: 26px; font-weight: 600; margin: 0; }
+.tagline { font-size: 15px; color: #656d76; margin: 8px 0 16px; }
+ul { margin: 24px 0 0; padding-left: 20px; font-size: 14px; }
+li { margin: 6px 0; }
+img { max-width: 100%; margin-top: 10px; border: 1px solid #e5e5e5; }
+figure { margin: 24px 0 0; }
+figcaption { font-size: 12px; color: #8b949e; margin-top: 4px; }
+pre { background: #f6f8fa; border: 1px solid #e5e5e5; padding: 12px;
+      overflow-x: auto; font-size: 13px; }
+code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
+hr { border: none; border-top: 1px solid #e5e5e5; margin: 32px 0; }
+footer { margin-top: 40px; font-size: 12px; color: #8b949e; }
+h2 { font-size: 17px; font-weight: 600; margin: 32px 0 8px; }
 </style>
 </head>
 <body>
 
-<header class="hero">
-  <div class="badge">Built on DeepSeek Harness · Open source</div>
-  <h1>DeepSeek Harness PR Review</h1>
-  <p class="tagline">Headless PR review automation: reads your pull request, deep-dives into the code, and tells you whether the description actually matches reality — claim by claim.</p>
-  <a class="btn" href="https://github.com/nexpeakcore/deepseek-harness-pr-review">View on GitHub</a>
-  <a class="btn ghost" href="#quickstart">Quickstart</a>
-</header>
+<h1>DeepSeek Harness PR Review</h1>
+<p class="tagline">Headless PR review: description verified claim-by-claim against
+real code, docs checked against reality, requirement impact flagged.
+<a href="https://github.com/nexpeakcore/deepseek-harness-pr-review">View on GitHub</a></p>
 
-<section id="how">
-  <div class="container">
-    <h2>How it works</h2>
-    <p class="subtitle">Five phases, one command. Every phase writes structured JSON to <code>sessions/</code> so results are auditable and re-runnable.</p>
-    <div class="phases">
-      <div class="phase"><div class="num">PHASE 1</div><h3>Snapshot</h3><p>Fetch PR metadata, diff, commits and review threads from GitHub (REST + GraphQL).</p></div>
-      <div class="phase"><div class="num">PHASE 2</div><h3>Claims</h3><p>LLM splits the PR description into verifiable claims — each one checkable against the code.</p></div>
-      <div class="phase"><div class="num">PHASE 3</div><h3>Verify</h3><p>A DeepSeek Harness agent deep-dives in a disposable worktree: claim verdicts, docs reality-check, requirement impact, thread status.</p></div>
-      <div class="phase"><div class="num">PHASE 4</div><h3>Human gate</h3><p>Confirmation questions (≤20 words) only when docs look wrong or a claim can't be verified. No guessing.</p></div>
-      <div class="phase"><div class="num">PHASE 5</div><h3>Synthesize</h3><p>English report.md + one idempotent comment on the PR. Re-runs update the comment in place.</p></div>
-    </div>
-  </div>
-</section>
+<ul>
+  <li><b>Verifies</b> — each PR description claim vs actual code, with file:line evidence</li>
+  <li><b>Checks</b> — repo docs against real code: Match / Stale / Wrong / Fabricated</li>
+  <li><b>Flags</b> — requirement impact, risks, and unresolved review threads</li>
+</ul>
 
-<section id="screenshots" style="background:#fff;border-top:1px solid #e3e8ee;border-bottom:1px solid #e3e8ee;">
-  <div class="container">
-    <h2>Dashboard &amp; results</h2>
-    <p class="subtitle">A local read-only web dashboard shows per-repo metrics and per-PR details with evidence. Demo data included.</p>
-    <div class="shots">
-      <div class="shot">
-        <img src="screenshots/repo-list.png" alt="Repository list">
-        <div class="cap"><b>Repository list</b><span>Repos with review data: PRs reviewed, bugs found, doc errors.</span></div>
-      </div>
-      <div class="shot">
-        <img src="screenshots/repo-detail.png" alt="Repo detail with KPIs and verdict donut">
-        <div class="cap"><b>Repo detail</b><span>KPI cards, verdict distribution donut, and the PR table.</span></div>
-      </div>
-      <div class="shot">
-        <img src="screenshots/pr-claims.png" alt="PR detail with claims tab">
-        <div class="cap"><b>PR detail — Claims</b><span>Each description claim with a verdict (Matches / Partial / Unverified) and file:line evidence.</span></div>
-      </div>
-      <div class="shot">
-        <img src="screenshots/pr-docs.png" alt="Docs reality-check tab">
-        <div class="cap"><b>Docs reality-check</b><span>Docs are compared against real code: Match / Stale / Wrong / Fabricated.</span></div>
-      </div>
-    </div>
-  </div>
-</section>
+<h2>Results</h2>
 
-<section id="features">
-  <div class="container">
-    <h2>What you get</h2>
-    <p class="subtitle">Built for teams that don't trust their PR descriptions or their docs.</p>
-    <div class="features">
-      <div class="feature"><h3>Claim-level verification</h3><p>Every sentence of the PR description is checked against the actual code with evidence.</p></div>
-      <div class="feature"><h3>Docs that lie</h3><p>Up to 60% of docs are wrong or fabricated. The agent cross-checks docs against code and flags them.</p></div>
-      <div class="feature"><h3>Requirement impact</h3><p>Understands which business requirements a change touches and whether it breaks anything.</p></div>
-      <div class="feature"><h3>Human in the loop</h3><p>Confirmation prompts are short, one at a time, and only when the agent can't decide.</p></div>
-      <div class="feature"><h3>Auto review</h3><p>Local poller reviews new PRs automatically and re-reviews when the head commit changes.</p></div>
-      <div class="feature"><h3>Traceable &amp; idempotent</h3><p>All phases persist structured JSON. Comments are never duplicated.</p></div>
-    </div>
-  </div>
-</section>
+<figure>
+  <img src="screenshots/repo-detail.png" alt="Repo detail: KPIs, verdict donut, open PRs with review status">
+  <figcaption>Repo detail — KPIs, verdict distribution, every open PR with review status</figcaption>
+</figure>
 
-<section id="quickstart" style="background:#fff;border-top:1px solid #e3e8ee;">
-  <div class="container">
-    <h2>Quickstart</h2>
-    <p class="subtitle">Python 3.10+, a GitHub token (<code>gh auth login</code>) and a DeepSeek API key.</p>
-    <pre><code>git clone https://github.com/nexpeakcore/deepseek-harness-pr-review.git
-cd deepseek-harness-pr-review
-python -m venv .venv && . .venv/bin/activate
-pip install -e '.[web]'
-export DEEPSEEK_API_KEY=sk-...
+<figure>
+  <img src="screenshots/pr-claims.png" alt="PR detail: claims with verdicts and evidence">
+  <figcaption>PR detail — each claim with a verdict and file:line evidence</figcaption>
+</figure>
+
+<figure>
+  <img src="screenshots/pr-docs.png" alt="Docs reality check tab">
+  <figcaption>Docs reality-check — docs compared against actual code</figcaption>
+</figure>
+
+<h2>Quickstart</h2>
+
+<pre><code>pip install -e '.[web]'
 gh auth login
+export DEEPSEEK_API_KEY=sk-...
 
-# Review one PR (interactive)
-python -m src.run owner/repo 123
+python -m src.run owner/repo 123   # review one PR
+python -m src.autoreview --daemon  # auto review every 2 min
+python -m web.server               # dashboard at http://127.0.0.1:6789</code></pre>
 
-# Dashboard
-DSH_SESSION_ROOT=sessions python -m web.server   # → http://127.0.0.1:6789
+<hr>
 
-# Auto review every new PR
-python -m src.autoreview --daemon</code></pre>
-  </div>
-</section>
-
-<footer>
-  <div class="container">
-    DeepSeek Harness PR Review · <a href="https://github.com/nexpeakcore/deepseek-harness-pr-review">GitHub</a> · MIT
-  </div>
-</footer>
+<footer>MIT · nexpeakcore · <a href="https://github.com/nexpeakcore/deepseek-harness-pr-review">GitHub</a></footer>
 
 </body>
 </html>
