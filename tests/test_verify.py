@@ -44,6 +44,12 @@ def test_parse_findings_invalid(tmp_path):
         parse_findings(f)
 
 
+def test_parse_findings_missing(tmp_path):
+    f = tmp_path / "findings.json"
+    with pytest.raises(RuntimeError, match="không tồn tại"):
+        parse_findings(f)
+
+
 def test_build_verify_prompt_contains_parts():
     snapshot = {"title": "T", "body": "B", "files": [{"filename": "a.py"}],
                 "threads": [{"body": "c1", "resolved": False}], "commits": []}

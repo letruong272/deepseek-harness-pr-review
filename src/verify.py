@@ -65,7 +65,7 @@ Yêu cầu:
 5. Không đoán. Mọi thứ không xác minh được → UNVERIFIED và thêm vào
    unresolved_questions (mỗi câu ≤20 chữ, tiếng Việt).
 
-Cuối cùng: GHI file findings.json vào thư mục workspace ({Path('.').resolve()})
+Cuối cùng: GHI file findings.json vào thư mục workspace hiện tại (nơi bạn đang làm việc)
 đúng schema (không có markdown fence, JSON thuần):
 {VERIFY_SCHEMA}
 """
@@ -96,16 +96,21 @@ def run_verify(cfg: dict, workspace: Path, session_dir: Path, snapshot: dict,
 
 def parse_findings(path: Path) -> dict:
     """Đọc + validate findings.json. Raise RuntimeError nếu sai schema."""
+    if not path.exists():
+        raise RuntimeError(f"invalid findings: {path} không tồn tại (agent không ghi findings.json)")
     try:
         data = json.loads(path.read_text())
-        assert isinstance(data, dict)
-        for key in ("claims", "docs", "impact", "threads", "unresolved_questions"):
-            assert isinstance(data.get(key), list)
-        for c in data["claims"]:
-            assert c.get("id") and c.get("status") in (
-                "PASS", "FAIL", "PARTIAL", "UNVERIFIED")
-        for d in data["docs"]:
-            assert d.get("status") in ("MATCH", "STALE", "WRONG", "FABRICATED")
-    except (json.JSONDecodeError, AssertionError, KeyError) as e:
+    except json.JSONDecodeError as e:
         raise RuntimeError(f"invalid findings: {e}") from e
+    if not isinstance(data, dict):
+        raise RuntimeError("invalid findings: phải là JSON object")
+    for key in ("claims", "docs", "impact", "threads", "unresolved_questions"):
+        if not isinstance(data.get(key), list):
+            raise RuntimeError(f"invalid findings: thiếu key {key} (phải là list)")
+    for c in data["claims"]:
+        if not c.get("id") or c.get("status") not in ("PASS", "FAIL", "PARTIAL", "UNVERIFIED"):
+            raise RuntimeError(f"invalid findings: claim sai schema: {c}")
+    for d in data["docs"]:
+        if d.get("status") not in ("MATCH", "STALE", "WRONG", "FABRICATED"):
+            raise RuntimeError(f"invalid findings: doc sai schema: {d}")
     return data
