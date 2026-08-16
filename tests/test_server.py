@@ -283,3 +283,13 @@ def test_trigger_review_concurrent_409(tmp_path, monkeypatch):
     r = client.post("/api/repos/sample-org/sample-app/pr/78/review")
     assert r.status_code == 409
     assert "already running" in r.json()["detail"]
+
+
+def test_repo_page_has_review_buttons(client, monkeypatch):
+    monkeypatch.setattr("gh.run_gh",
+                        lambda args, **kw: [
+                            {"number": 78, "title": "chore: update deps",
+                             "draft": False}])
+    resp = client.get("/repos/sample-org/sample-app")
+    assert resp.status_code == 200
+    assert "Review now" in resp.text

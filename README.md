@@ -60,7 +60,10 @@ Pages: repo list → repo detail (KPIs + verdict donut + PR table) → PR detail
 (tabs: Claims / Docs / Impact / Threads / Confirm). The PR table lists ALL open
 PRs from GitHub with review status (Not reviewed / Reviewing / Reviewed N
 rounds); Bugs counts FAIL + PARTIAL claims and BROKEN + RISK impacts; Doc
-errors counts WRONG + FABRICATED + STALE docs.
+errors counts WRONG + FABRICATED + STALE docs. Each open PR row has a
+**Review now** / **Re-review** button that runs the review synchronously using
+the repo's auto-review config (skip-human + post-comment flags from
+`autoreview.yml`).
 
 **Demo data** is checked into `sessions/demo/app/` — start the server and open
 http://127.0.0.1:6789/repos/demo/app/pr/7 for a sample review (PR #8 shows a
