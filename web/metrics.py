@@ -60,6 +60,17 @@ def list_repos(session_root: Path) -> list[tuple[str, str]]:
     return pairs
 
 
+def _read_rounds(session_dir: Path) -> int:
+    """Rounds from rounds.txt; fallback 1 for legacy sessions; garbage → 1."""
+    path = session_dir / "rounds.txt"
+    if not path.exists():
+        return 1
+    try:
+        return max(1, int(path.read_text().strip()))
+    except (OSError, ValueError):
+        return 1
+
+
 def pr_record(session_root: Path, owner: str, repo: str, n: int) -> dict | None:
     """Build one PR metric record. None if missing/corrupt data."""
     session_dir = session_root / owner / repo / f"pr-{n}"
@@ -88,12 +99,15 @@ def pr_record(session_root: Path, owner: str, repo: str, n: int) -> dict | None:
         "head": snapshot.get("head", ""),
         "verdict": _verdict_key(_overall_verdict(findings)),
         "claims_total": len(claims),
-        "bugs": sum(1 for c in claims if c.get("status") == "FAIL")
-                + sum(1 for i in impact if i.get("impact") == "BROKEN"),
+        "bugs": sum(1 for c in claims
+                    if c.get("status") in ("FAIL", "PARTIAL"))
+                + sum(1 for i in impact
+                      if i.get("impact") in ("BROKEN", "RISK")),
         "doc_errors": sum(1 for d in docs
-                          if d.get("status") in ("WRONG", "FABRICATED")),
+                          if d.get("status") in ("WRONG", "FABRICATED", "STALE")),
         "open_questions": sum(1 for a in answers
                               if a.get("answer") in ("SKIPPED", "")),
+        "rounds": _read_rounds(session_dir),
         "updated_at": _session_updated(session_dir),
         "failed": failed,
     }
@@ -162,3 +176,76 @@ def pr_detail(session_root: Path, owner: str, repo: str, n: int) -> dict | None:
         "threads": findings.get("threads", []),
         "answers": answers,
     }
+
+
+def open_prs(session_root: Path, owner: str, repo: str, gh=None) -> list[dict]:
+    """Merge GitHub open PRs with session state.
+
+    Returns rows: {pr, title, draft, status, rounds, bugs, doc_errors,
+    unavailable} sorted by pr desc. status: reviewed | reviewing | not_reviewed.
+    gh failure → rows for reviewed sessions only, unavailable=True.
+    """
+    if gh is None:
+        from gh import run_gh
+        gh = run_gh
+    rows = []
+    unavailable = False
+    try:
+        prs = gh(["api", f"repos/{owner}/{repo}/pulls?state=open", "--paginate"])
+    except (RuntimeError, OSError):
+        prs = []
+        unavailable = True
+
+    session_dir = session_root / owner / repo
+    seen = set()
+    for p in prs:
+        n = int(p["number"])
+        seen.add(n)
+        d = session_dir / f"pr-{n}"
+        if (d / "findings.json").exists():
+            rec = pr_record(session_root, owner, repo, n)
+            rows.append({
+                "pr": n, "title": p.get("title", ""),
+                "draft": bool(p.get("draft")),
+                "status": "reviewed",
+                "rounds": _read_rounds(d),
+                "bugs": rec["bugs"] if rec else 0,
+                "doc_errors": rec["doc_errors"] if rec else 0,
+                "unavailable": unavailable,
+            })
+        elif d.exists():
+            rows.append({
+                "pr": n, "title": p.get("title", ""),
+                "draft": bool(p.get("draft")),
+                "status": "reviewing", "rounds": None,
+                "bugs": None, "doc_errors": None,
+                "unavailable": unavailable,
+            })
+        else:
+            rows.append({
+                "pr": n, "title": p.get("title", ""),
+                "draft": bool(p.get("draft")),
+                "status": "not_reviewed", "rounds": None,
+                "bugs": None, "doc_errors": None,
+                "unavailable": unavailable,
+            })
+
+    if unavailable:
+        # gh lỗi → fallback: PR đã review từ sessions
+        for d in sorted((session_root / owner / repo).glob("pr-*")):
+            n = int(d.name.split("-")[1])
+            if n in seen:
+                continue
+            if (d / "findings.json").exists():
+                rec = pr_record(session_root, owner, repo, n)
+                rows.append({
+                    "pr": n, "title": "", "draft": False,
+                    "status": "reviewed",
+                    "rounds": _read_rounds(d),
+                    "bugs": rec["bugs"] if rec else 0,
+                    "doc_errors": rec["doc_errors"] if rec else 0,
+                    "unavailable": True,
+                })
+
+    rows.sort(key=lambda r: r["pr"], reverse=True)
+    return rows

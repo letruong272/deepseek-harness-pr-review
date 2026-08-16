@@ -118,3 +118,91 @@ def test_pr_detail_merges_claims(tmp_path):
     assert detail["claims"][0]["text"] == "Adds checkout"
     assert detail["claims"][0]["status"] == "PASS"
     assert detail["claims"][0]["category"] == "feature"
+
+
+def test_pr_record_wider_metrics(tmp_path):
+    findings = {
+        "claims": [{"id": "C1", "status": "FAIL", "evidence": [], "note": ""},
+                   {"id": "C2", "status": "PARTIAL", "evidence": [], "note": ""},
+                   {"id": "C3", "status": "PASS", "evidence": [], "note": ""}],
+        "docs": [{"path": "a.md", "status": "WRONG", "what": ""},
+                 {"path": "b.md", "status": "STALE", "what": ""},
+                 {"path": "c.md", "status": "FABRICATED", "what": ""},
+                 {"path": "d.md", "status": "MATCH", "what": ""}],
+        "impact": [{"requirement": "R1", "impact": "BROKEN", "detail": ""},
+                   {"requirement": "R2", "impact": "RISK", "detail": ""},
+                   {"requirement": "R3", "impact": "CHANGED", "detail": ""}],
+        "threads": [],
+        "unresolved_questions": [],
+    }
+    _write_session(tmp_path, "o", "r", 7, snapshot=SNAPSHOT, findings=findings)
+    rec = metrics.pr_record(tmp_path, "o", "r", 7)
+    assert rec["bugs"] == 4          # FAIL + PARTIAL + BROKEN + RISK
+    assert rec["doc_errors"] == 3    # WRONG + FABRICATED + STALE
+
+
+def test_pr_record_rounds(tmp_path):
+    _write_session(tmp_path, "o", "r", 7, snapshot=SNAPSHOT,
+                   findings=EMPTY_FINDINGS)
+    (tmp_path / "o" / "r" / "pr-7" / "rounds.txt").write_text("3")
+    rec = metrics.pr_record(tmp_path, "o", "r", 7)
+    assert rec["rounds"] == 3
+
+
+def test_pr_record_rounds_fallback(tmp_path):
+    # không có rounds.txt → 1
+    _write_session(tmp_path, "o", "r", 7, snapshot=SNAPSHOT,
+                   findings=EMPTY_FINDINGS)
+    assert metrics.pr_record(tmp_path, "o", "r", 7)["rounds"] == 1
+
+
+def test_pr_record_rounds_garbage(tmp_path):
+    _write_session(tmp_path, "o", "r", 7, snapshot=SNAPSHOT,
+                   findings=EMPTY_FINDINGS)
+    (tmp_path / "o" / "r" / "pr-7" / "rounds.txt").write_text("abc")
+    assert metrics.pr_record(tmp_path, "o", "r", 7)["rounds"] == 1
+
+
+def test_open_prs_merge(tmp_path):
+    root = tmp_path / "sessions"
+    _write_session(root, "o", "r", 7, snapshot=SNAPSHOT,
+                   findings=EMPTY_FINDINGS)
+    (root / "o" / "r" / "pr-7" / "rounds.txt").write_text("2")
+    # pr-8: session dir có snapshot nhưng chưa có findings → Reviewing…
+    d8 = root / "o" / "r" / "pr-8"
+    d8.mkdir(parents=True)
+    (d8 / "snapshot.json").write_text(json.dumps(SNAPSHOT))
+
+    open_prs = [
+        {"number": 7, "title": "T7", "draft": False},
+        {"number": 8, "title": "T8", "draft": True},
+        {"number": 9, "title": "T9", "draft": False},
+    ]
+
+    def fake_gh(args, **kw):
+        assert "pulls" in args[1]
+        return open_prs
+
+    rows = metrics.open_prs(root, "o", "r", gh=fake_gh)
+    by_num = {r["pr"]: r for r in rows}
+    assert by_num[7]["status"] == "reviewed"
+    assert by_num[7]["rounds"] == 2
+    assert by_num[7]["draft"] is False
+    assert by_num[8]["status"] == "reviewing"
+    assert by_num[9]["status"] == "not_reviewed"
+    # sort theo number desc
+    assert [r["pr"] for r in rows] == [9, 8, 7]
+
+
+def test_open_prs_gh_failure(tmp_path):
+    root = tmp_path / "sessions"
+    _write_session(root, "o", "r", 7, snapshot=SNAPSHOT,
+                   findings=EMPTY_FINDINGS)
+
+    def fake_gh(args, **kw):
+        raise RuntimeError("rate limited")
+
+    rows = metrics.open_prs(root, "o", "r", gh=fake_gh)
+    # gh lỗi → trả PR đã review từ sessions, đánh dấu unavailable
+    assert rows[0]["pr"] == 7
+    assert rows[0]["unavailable"] is True
