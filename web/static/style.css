@@ -71,3 +71,6 @@ a.card.auto { border-style: dashed; }
 .gh-link:hover { text-decoration: underline; }
 .breakdown { margin-top: 8px; font-size: 12px; }
 .verdict { margin-right: 4px; }
+.review-cell { display: inline-flex; align-items: center; gap: 10px;
+               white-space: nowrap; }
+.review-cell .gh-link { margin-left: 0; }
