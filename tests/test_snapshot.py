@@ -96,6 +96,18 @@ def test_build_snapshot_graphql_error(tmp_path):
         build_snapshot("demo", "app", 7, tmp_path, gh=_gh_fake(registry))
 
 
+def test_build_snapshot_head_sha(tmp_path):
+    meta = {**PR_META, "head": {"ref": "feature/checkout", "sha": "sha123"}}
+    registry = {
+        "repos/demo/app/pulls/7/commits": COMMITS,
+        "repos/demo/app/pulls/7/files": PR_FILES,
+        "repos/demo/app/pulls/7": meta,
+        "graphql": PR_THREADS,
+    }
+    result = build_snapshot("demo", "app", 7, tmp_path, gh=_gh_fake(registry))
+    assert result["head_sha"] == "sha123"
+
+
 def test_build_snapshot_thread_truncation_warns(tmp_path, capsys):
     threads = {
         "data": {

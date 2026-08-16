@@ -78,6 +78,7 @@ def build_snapshot(owner: str, repo: str, n: int, session_dir: Path,
         "author": (meta.get("user") or {}).get("login", ""),
         "base": (meta.get("base") or {}).get("ref", ""),
         "head": (meta.get("head") or {}).get("ref", ""),
+        "head_sha": (meta.get("head") or {}).get("sha", ""),
         "labels": [l.get("name") for l in meta.get("labels", [])],
         "files": [
             {
