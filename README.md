@@ -59,6 +59,47 @@ DSH_SESSION_ROOT=sessions python -m web.server
 Pages: repo list → repo detail (KPIs + verdict donut + PR table) → PR detail
 (tabs: Claims / Docs / Impact / Threads / Confirm).
 
+## Auto review
+
+Poll GitHub for new PRs (and head-SHA changes) on configured repos and review
+them automatically in batch mode.
+
+```bash
+# config: edit autoreview.yml (repos, interval, flags)
+pip install -e '.[dev]'   # pyyaml comes with the SDK; add if missing
+python -m src.autoreview --once            # single pass (cron/launchd)
+python -m src.autoreview --daemon          # loop every interval_minutes
+python -m src.autoreview --once --dry-run  # print what would be reviewed
+```
+
+launchd example:
+
+```xml
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN"
+  "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>Label</key><string>com.nexpeak.pr-review</string>
+  <key>ProgramArguments</key>
+  <array>
+    <string>/Users/gianglh/work/harness/.venv/bin/python</string>
+    <string>-m</string><string>src.autoreview</string><string>--once</string>
+  </array>
+  <key>WorkingDirectory</key><string>/Users/gianglh/work/harness</string>
+  <key>EnvironmentVariables</key>
+  <dict>
+    <key>PYTHONPATH</key><string>src</string>
+    <key>DEEPSEEK_API_KEY</key><string>your-key</string>
+  </dict>
+  <key>StartInterval</key><integer>600</integer>
+</dict>
+</plist>
+```
+
+Re-review rules: head SHA in the PR changed vs the last snapshot → all phases
+re-run with `--force`; the PR comment is updated in place (never duplicated).
+
 ## Configuration
 
 | Env | Default | Meaning |
