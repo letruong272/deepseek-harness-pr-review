@@ -56,8 +56,8 @@ autoreview.log          # per-run log (auto-created)
    - No `sessions/<o>/<r>/pr-<n>/snapshot.json` → NEW → review
    - Snapshot exists but `head_sha` != current `head.sha` → RE-RUN → review
    - Head matches → SKIP
-4. Dispatch via `run.main([owner/repo, n, --skip-human, --no-post?])` with flags
-   from config
+4. Dispatch via `run.main([owner/repo, n, --skip-human])`; add `--no-post`
+   when `post_comment: false` in config
 5. Log per PR: `NEW|RE-RUN|SKIPPED|FAILED <owner/repo>#<n> — reason`
 
 ### Snapshot change
