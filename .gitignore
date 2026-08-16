@@ -10,3 +10,5 @@ dist/
 *.egg-info/
 .superpowers/
 .gstack/
+autoreview.log
+autoreview.lock
