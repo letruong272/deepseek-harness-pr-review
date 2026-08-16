@@ -26,6 +26,8 @@ def test_decide_pr_new(tmp_path):
     _write_session(root, "o", "r", 5)
     d = root / "o" / "r" / "pr-5"
     (d / "snapshot.json").write_text(json.dumps(SNAPSHOT))
+    # viết findings SAU snapshot → findings mới hơn → review hoàn chỉnh → SKIP
+    (d / "findings.json").write_text(json.dumps(EMPTY_FINDINGS))
     assert decide_pr(root, "o", "r", 5, "abc") == "SKIP"
     assert decide_pr(root, "o", "r", 6, "def") == "NEW"
 
@@ -190,3 +192,28 @@ def test_acquire_lock_alive(tmp_path, monkeypatch):
     monkeypatch.setattr("autoreview.LOCK_PATH", tmp_path / "autoreview.lock")
     (tmp_path / "autoreview.lock").write_text(str(os.getpid()))  # PID sống
     assert _acquire_lock() is False
+
+
+def test_decide_pr_incomplete_review(tmp_path):
+    # head khớp nhưng snapshot mới hơn findings (re-review fail giữa chừng)
+    root = tmp_path / "sessions"
+    d = root / "o" / "r" / "pr-5"
+    d.mkdir(parents=True)
+    (d / "snapshot.json").write_text(json.dumps({**SNAPSHOT, "head_sha": "abc"}))
+    (d / "findings.json").write_text(json.dumps(EMPTY_FINDINGS))
+    import os
+    os.utime(d / "snapshot.json", (1700000000, 1700000000))
+    os.utime(d / "findings.json", (1699999000, 1699999000))  # cũ hơn
+    assert decide_pr(root, "o", "r", 5, "abc") == "RE-RUN"
+
+
+def test_decide_pr_complete_review_skips(tmp_path):
+    root = tmp_path / "sessions"
+    d = root / "o" / "r" / "pr-5"
+    d.mkdir(parents=True)
+    (d / "snapshot.json").write_text(json.dumps({**SNAPSHOT, "head_sha": "abc"}))
+    (d / "findings.json").write_text(json.dumps(EMPTY_FINDINGS))
+    import os
+    os.utime(d / "snapshot.json", (1699999000, 1699999000))
+    os.utime(d / "findings.json", (1700000000, 1700000000))  # mới hơn
+    assert decide_pr(root, "o", "r", 5, "abc") == "SKIP"

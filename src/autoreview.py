@@ -24,7 +24,8 @@ LOCK_PATH = Path("autoreview.lock")
 def decide_pr(session_root: Path, owner: str, repo: str, n: int,
               head_sha: str) -> str:
     """Return NEW / RE-RUN / SKIP for one PR."""
-    snapshot_path = session_root / owner / repo / f"pr-{n}" / "snapshot.json"
+    session_dir = session_root / owner / repo / f"pr-{n}"
+    snapshot_path = session_dir / "snapshot.json"
     if not snapshot_path.exists():
         return "NEW"
     try:
@@ -33,6 +34,14 @@ def decide_pr(session_root: Path, owner: str, repo: str, n: int,
         return "RE-RUN"  # snapshot hỏng → chạy lại cho an toàn
     old_sha = snapshot.get("head_sha", "")
     if old_sha and old_sha == head_sha:
+        # head khớp nhưng snapshot mới hơn findings (re-review fail giữa chừng
+        # sau khi fetch head mới) → review chưa hoàn thành → chạy lại
+        findings_path = session_dir / "findings.json"
+        try:
+            if snapshot_path.stat().st_mtime > findings_path.stat().st_mtime:
+                return "RE-RUN"
+        except OSError:
+            return "RE-RUN"  # thiếu findings → review dở dang
         return "SKIP"
     return "RE-RUN"
 
