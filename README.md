@@ -57,7 +57,10 @@ DSH_SESSION_ROOT=sessions python -m web.server
 ```
 
 Pages: repo list → repo detail (KPIs + verdict donut + PR table) → PR detail
-(tabs: Claims / Docs / Impact / Threads / Confirm).
+(tabs: Claims / Docs / Impact / Threads / Confirm). The PR table lists ALL open
+PRs from GitHub with review status (Not reviewed / Reviewing / Reviewed N
+rounds); Bugs counts FAIL + PARTIAL claims and BROKEN + RISK impacts; Doc
+errors counts WRONG + FABRICATED + STALE docs.
 
 **Demo data** is checked into `sessions/demo/app/` — start the server and open
 http://127.0.0.1:6789/repos/demo/app/pr/7 for a sample review (PR #8 shows a
