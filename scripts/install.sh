@@ -18,7 +18,7 @@
 
 set -euo pipefail
 
-REPO_URL="https://github.com/nexpeakcore/deepseek-harness-pr-review.git"
+REPO_URL="git+https://github.com/nexpeakcore/deepseek-harness-pr-review.git"
 INSTALL_DIR="$HOME/.harness-pr-review"
 VENV_DIR="$INSTALL_DIR/venv"
 BIN_DIR="$HOME/.local/bin"
