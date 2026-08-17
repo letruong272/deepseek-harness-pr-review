@@ -35,7 +35,7 @@ all-auto).
 - `load_config(path) -> dict` — new format + backward compat
 - `set_repo_mode(path, repo, mode)` — add/change mode, rewrite file
 - `remove_repo(path, repo)` — remove from repos dict
-- `list_repos(path, gh) -> [{repo, mode: auto|manual|unlisted}]` — org repos
+- `list_repos(path, gh) -> [{name, mode: auto|manual|unlisted}]` — org repos
   via `gh api orgs/{org}/repos` (skip if no org), merged with configured modes
 - File writes are atomic (write temp + rename)
 
@@ -69,10 +69,10 @@ New API routes:
 - Corrupt config YAML → UI shows "invalid config: ..." + still renders reviewed
   repos block
 - Org discovery fails (bad org / no auth) → hide discovery, show config + review
-  data, "org lookup failed" badge
+  data, "org lookup failed" badge *(not implemented — org lookup fails silently, configured repos still shown)*
 - Concurrent UI+CLI writes → atomic write (temp + rename); poller reads config
   once per pass
-- Add non-existent repo → HTTP 400 with clear message
+- Add non-existent repo → HTTP 400 with clear message *(not implemented — repo existence is not validated on add)*
 - API errors: `{detail: "..."}` HTTP 400/404, inline message in UI
 
 ## Testing
