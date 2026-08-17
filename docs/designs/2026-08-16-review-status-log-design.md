@@ -46,7 +46,7 @@ in the UI instead of a bare error alert.
 - **Review log panel**: when reviewing (or after clicking Review now), show a
   dark `<pre>` panel with the log tail; auto-refresh every 3s while
   `running: true`; stops when done; collapsible
-- Auto page reload every 15s if any row is `reviewing`
+- Repo page shows a live log panel (3s polling) for reviewing rows; the raw `started_at` timestamp is shown next to the PID (elapsed-ago formatting not implemented)
 
 ## Testing
 
