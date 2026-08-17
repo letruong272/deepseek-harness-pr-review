@@ -149,7 +149,7 @@ python -m pytest -v
 
 ## Web dashboard
 
-Read-only dashboard for review metrics (PRs reviewed, risks found, doc errors, verdicts
+Web dashboard for review metrics (PRs reviewed, risks found, doc errors, verdicts
 per repo). Reads `sessions/` directly — no database.
 
 ```bash

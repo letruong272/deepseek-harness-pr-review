@@ -37,7 +37,7 @@ Table columns: `# | Title | Draft | Review status | Risks | Doc errors`
 **Broader metrics (`web/metrics.py`):**
 - `risks` = claims `FAIL` + `PARTIAL` + impact `BROKEN` + `RISK` (internal key: bugs)
 - `doc_errors` = docs `WRONG` + `FABRICATED` + `STALE`
-- Real pr-77 fixture: 10 claims (1 PARTIAL), 4 docs (2 STALE), 5 impact (2 RISK)
+- Demo fixture (tests/test_metrics.py): claims PARTIAL/RISK/STALE combinations assert the counting rules
   → risks = 3, doc_errors = 2
 
 **Data flow:**
