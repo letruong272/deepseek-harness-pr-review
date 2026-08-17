@@ -15,7 +15,7 @@ shows.
 Table columns: `# | Title | Draft | Review status | Risks | Doc errors`
 
 - Source of open PRs: `gh api repos/{o}/{r}/pulls?state=open`
-  (reuse `autoreview.fetch_open_prs`)
+  (metrics.open_prs duplicates the gh call directly — kept separate to avoid a web→autoreview import)
 - Review status per PR (from sessions/):
   - `Not reviewed` — no session dir
   - `Reviewing…` — session dir exists but findings.json missing (in progress)

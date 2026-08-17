@@ -49,7 +49,7 @@ all-auto).
 
 ### `web/server.py` (extended)
 
-Repo list page (`/`) gets a config management block on top of the dashboard:
+A dedicated `/config` page holds the config management block (separate from the repo dashboard at `/`):
 
 - **Block 1 — Repo config**: org header + global badges (interval, drafts,
   post_comment); table of org repos with Auto/Manual toggle, Remove button for
