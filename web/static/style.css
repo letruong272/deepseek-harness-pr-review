@@ -77,3 +77,5 @@ a.card.auto { border-style: dashed; }
 .tag.auto { background: #27ae60; }
 .tag.manual { background: #6b7280; }
 .tag.unlisted { background: #a0a6ad; }
+.mode-toggle { margin-left: 12px; }
+.tag.manual { background: #6b7280; }

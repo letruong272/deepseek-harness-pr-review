@@ -102,8 +102,9 @@ def repo_page(request: Request, owner: str, repo: str):
     else:
         rec["has_data"] = True
 
-    # mode từ autoreview.yml (auto/manual/unlisted) — hiển thị trên title
-    repo_mode = "unlisted"
+    # mode từ autoreview.yml — repo chưa có trong config dùng default_mode (manual)
+    repo_mode = "manual"
+    mode_configured = False
     cfg_path = _config_path()
     if cfg_path.exists():
         try:
@@ -115,10 +116,14 @@ def repo_page(request: Request, owner: str, repo: str):
             repo_mode = acfg["repos"].get(key) or acfg["repos"].get(repo)
             if repo_mode is None and org and org == owner:
                 repo_mode = acfg["repos"].get(repo)
-            repo_mode = repo_mode or "unlisted"
+            if repo_mode is not None:
+                mode_configured = True
+            else:
+                repo_mode = acfg.get("default_mode", "manual")
         except (ValueError, OSError):
             pass
     rec["mode"] = repo_mode
+    rec["mode_configured"] = mode_configured
 
     verdict_json = json.dumps(rec["verdict_count"])
     open_qs = sum(p["open_questions"] for p in rec["prs"])
