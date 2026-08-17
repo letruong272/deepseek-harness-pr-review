@@ -66,8 +66,7 @@ New API routes:
 
 ## Error Handling
 
-- Corrupt config YAML → UI shows "invalid config: ..." + still renders reviewed
-  repos block
+- Corrupt config YAML → the /config page shows "invalid config: ..."; the repo dashboard at / still renders reviewed repos independently
 - Org discovery fails (bad org / no auth) → hide discovery, show config + review
   data, "org lookup failed" badge *(not implemented — org lookup fails silently, configured repos still shown)*
 - Concurrent UI+CLI writes → atomic write (temp + rename); poller reads config
