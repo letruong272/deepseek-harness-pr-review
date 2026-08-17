@@ -10,3 +10,4 @@ repos:
   admin-web: auto
   sample-org/sample-api: auto
   sample-app2: auto
+  erp: manual

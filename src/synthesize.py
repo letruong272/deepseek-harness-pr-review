@@ -86,10 +86,10 @@ def build_report(snapshot: dict, claims: list[dict], findings: dict,
 
 
 VERDICT_BADGE = {
-    "ACCURATE": ("#27ae60", "ACCURATE"),
-    "PARTIAL": ("#b9770e", "PARTIAL"),
-    "MISLEADING": ("#c0392b", "MISLEADING"),
-    "NO CLAIMS": ("#6b7280", "NO CLAIMS"),
+    "ACCURATE": ("#27ae60", "Description accurate"),
+    "PARTIAL": ("#b9770e", "Description partial"),
+    "MISLEADING": ("#c0392b", "Description misleading"),
+    "NO CLAIMS": ("#6b7280", "No claims"),
 }
 STATUS_COLORS = {
     "MATCHES": "#27ae60", "PASS": "#27ae60", "RESOLVED": "#27ae60",
@@ -224,7 +224,7 @@ def build_comment(snapshot: dict, claims: list[dict], findings: dict,
                      if d.get("status") in ("WRONG", "FABRICATED", "STALE"))
     summary = (
         f"{_badge(v_text, v_color)} "
-        f"{_badge(f'Bugs: {bugs}', '#c0392b' if bugs else '#6b7280')} "
+        f"{_badge(f'Risks found: {bugs}', '#c0392b' if bugs else '#6b7280')} "
         f"{_badge(f'Doc errors: {doc_errors}', '#b9770e' if doc_errors else '#6b7280')}"
     )
     return (

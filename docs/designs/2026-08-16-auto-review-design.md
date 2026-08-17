@@ -21,13 +21,15 @@ Local poller daemon (user chose option A over GitHub Actions / webhook):
 ## Config (`autoreview.yml`, at repo root)
 
 ```yaml
+org: sample-org            # default org for repo discovery
+default_mode: manual        # repos not listed → manual
+interval_minutes: 2
+post_comment: true
+skip_human: true
+drafts: false
+skip_bots: true            # skip bot PRs (Renovate/Dependabot) in auto review
 repos:
-  - sample-org/sample-app
-  - sample-org/sample-api
-interval_minutes: 10      # for --daemon mode
-post_comment: true        # post the report comment to the PR
-skip_human: true          # always batch (no one answers questions in background)
-drafts: false             # skip draft PRs
+  sample-app: auto          # dict mode: repo name → mode (URLs and owner/repo accepted via --add-repo)
 ```
 
 ## Architecture
@@ -72,8 +74,8 @@ marked comment), so re-review never spams.
 
 ## Error Handling
 
-- `gh api` failure (auth, rate limit) → log `POLL-ERROR`, abort this pass (no
-  hot retry), next pass retries
+- `gh api` failure (auth, rate limit) → log `POLL-ERROR` for that repo and
+  continue to the next repo (no hot retry); the next pass retries
 - One PR failing (model/agent error) → log `FAILED`, continue with other PRs
 - Lock file `autoreview.lock` — prevents two concurrent pollers (daemon + cron)
 - Missing API key → clear error at startup, exit 3 (consistent with run.py)
@@ -89,7 +91,7 @@ marked comment), so re-review never spams.
 
 - `test_autoreview.py`: fake gh (PR lists + head SHAs) + fixture sessions dir →
   assert correct NEW / RE-RUN / SKIPPED selection, log statuses, lock file
-  behavior, missing-repo config error
+  behavior, stale-lock takeover, skip-bot filtering
 - `test_snapshot.py`: extend fixture with `head_sha` assertion
 - E2E: `--once --dry-run` against real gh prints PRs that would be reviewed
   without dispatching

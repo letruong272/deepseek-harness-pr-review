@@ -7,7 +7,7 @@
 
 Allow per-repo control of auto review: each repo in an org (or any repo the user
 adds) can be set to `auto` (poller reviews its PRs) or `manual` (poller skips it;
-review via CLI). The config is editable both from the web dashboard (repo list
+review via CLI). The config is editable both from the web dashboard (dedicated /config
 page) and the CLI — both write the same `autoreview.yml`.
 
 ## Config format (`autoreview.yml`)
@@ -35,7 +35,7 @@ all-auto).
 - `load_config(path) -> dict` — new format + backward compat
 - `set_repo_mode(path, repo, mode)` — add/change mode, rewrite file
 - `remove_repo(path, repo)` — remove from repos dict
-- `list_repos(path, gh) -> [{repo, mode: auto|manual|unlisted}]` — org repos
+- `list_repos(path, gh) -> [{name, mode: auto|manual|unlisted}]` — org repos
   via `gh api orgs/{org}/repos` (skip if no org), merged with configured modes
 - File writes are atomic (write temp + rename)
 
@@ -49,12 +49,15 @@ all-auto).
 
 ### `web/server.py` (extended)
 
-Repo list page (`/`) gets a config management block on top of the dashboard:
+A dedicated `/config` page holds the config management block (separate from the repo dashboard at `/`):
 
-- **Block 1 — Repo config**: org header + global badges (interval, drafts,
-  post_comment); table of org repos with Auto/Manual toggle, Remove button for
-  listed repos, "Enable auto" for unlisted repos; "Add repo" form; "Refresh".
-- **Block 2 — Reviewed repos**: existing dashboard (sessions data).
+- `/` lists reviewed repos (from sessions) plus auto-configured repos
+  without review data (AUTO badge cards).
+- The dedicated `/config` page holds the repo config UI: org header + global
+  badges (interval, drafts, post_comment); table of org repos with Auto/Manual
+  toggle, Remove button for listed repos, "Enable auto" for unlisted repos;
+  "Add repo" form; "Refresh".
+(The repo dashboard at `/` shows reviewed repos from sessions; the config page is standalone.)
 
 New API routes:
 - `GET /api/config` — current config + org repos with per-repo mode
@@ -66,20 +69,19 @@ New API routes:
 
 ## Error Handling
 
-- Corrupt config YAML → UI shows "invalid config: ..." + still renders reviewed
-  repos block
+- Corrupt config YAML → the /config page shows "invalid config: ..."; the repo dashboard at / still renders reviewed repos independently
 - Org discovery fails (bad org / no auth) → hide discovery, show config + review
-  data, "org lookup failed" badge
+  data, "org lookup failed" badge *(not implemented — org lookup fails silently, configured repos still shown)*
 - Concurrent UI+CLI writes → atomic write (temp + rename); poller reads config
   once per pass
-- Add non-existent repo → HTTP 400 with clear message
-- API errors: `{detail: "..."}` HTTP 400/404, inline message in UI
+- Add non-existent repo → HTTP 400 with clear message *(not implemented — repo existence is not validated on add)*
+- API errors: `{detail: "..."}` HTTP 400/404, surfaced via `alert()` in the config page JS
 
 ## Testing
 
 - `tests/test_autoreview_config.py`: set_repo_mode add/change, remove_repo,
   list_repos with fake gh, backward compat, corrupt YAML error
 - `tests/test_server.py`: POST mode writes real temp config, DELETE removes,
-  GET /api/config returns org repos + modes (fake gh), add missing repo → 400
+  GET /api/config returns org repos + modes (fake gh), toggle/add/remove write the real config file
 - `tests/test_autoreview.py`: poller skips non-auto repos, `--repos` output
 - Manual E2E: run server, toggle repo on demo org

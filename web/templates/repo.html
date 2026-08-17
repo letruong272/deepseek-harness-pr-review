@@ -5,14 +5,22 @@
 {% endblock %}
 {% block content %}
 <h1>{{ repo.owner }}/{{ repo.repo }}
-  {% if not repo.has_data %}<span class="tag auto">AUTO</span>{% endif %}</h1>
+  <span class="tag {{ repo.mode }}">{{ repo.mode|upper }}{% if not repo.mode_configured %} (default){% endif %}</span>
+  <button class="tab-btn review-btn mode-toggle"
+          onclick="toggleMode(this)"
+          data-mode="{{ repo.mode }}"
+          data-owner="{{ repo.owner }}" data-repo="{{ repo.repo }}"
+          {% if repo.mode == 'auto' %}data-next="manual"{% else %}data-next="auto"{% endif %}>
+    Switch to {% if repo.mode == 'auto' %}MANUAL{% else %}AUTO{% endif %}
+  </button>
+  <span id="mode-msg" class="review-msg"></span></h1>
 {% if not repo.has_data %}<p class="muted">No reviews yet — new PRs are
 reviewed automatically. Click <b>Review now</b> to run the first one.</p>{% endif %}
 
 <div class="kpi-row">
   <div class="kpi-card"><div class="kpi-label">PRs REVIEWED</div>
     <div class="kpi-value">{{ repo.prs_total }}</div></div>
-  <div class="kpi-card bad"><div class="kpi-label">BUGS</div>
+  <div class="kpi-card bad"><div class="kpi-label">RISKS FOUND</div>
     <div class="kpi-value">{{ repo.bugs_total }}</div></div>
   <div class="kpi-card warn"><div class="kpi-label">DOC ERRORS</div>
     <div class="kpi-value">{{ repo.doc_errors_total }}</div></div>
@@ -25,7 +33,7 @@ reviewed automatically. Click <b>Review now</b> to run the first one.</p>{% endi
 <h2>Pull requests</h2>
 <table class="table">
   <thead><tr><th>#</th><th>Title</th><th>Draft</th><th>Review status</th>
-    <th>Bugs</th><th>Doc errors</th><th>Actions</th></tr></thead>
+    <th>Risks</th><th>Doc errors</th><th>Actions</th></tr></thead>
   <tbody>
   {% for p in pr_rows %}
     <tr>
@@ -137,6 +145,33 @@ async function triggerReview(pr, btn) {
     btn.textContent = original;
     btn.disabled = false;
   }
+}
+
+async function toggleMode(btn) {
+  if (btn.disabled) return;
+  btn.disabled = true;
+  const original = btn.textContent;
+  btn.textContent = "Saving…";
+  const msgEl = document.getElementById("mode-msg");
+  try {
+    const r = await fetch(
+      `/api/config/repos/${encodeURIComponent(btn.dataset.repo)}/mode`,
+      {method: "POST", headers: {"Content-Type": "application/json"},
+       body: JSON.stringify({mode: btn.dataset.next})});
+    if (!r.ok) {
+      const data = await r.json().catch(() => ({}));
+      msgEl.textContent = data.detail || "failed";
+      msgEl.className = "review-msg warn";
+    } else {
+      location.reload();
+      return;
+    }
+  } catch (e) {
+    msgEl.textContent = "network error: " + e;
+    msgEl.className = "review-msg warn";
+  }
+  btn.textContent = original;
+  btn.disabled = false;
 }
 </script>
 {% endblock %}

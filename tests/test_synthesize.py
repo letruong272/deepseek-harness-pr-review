@@ -115,7 +115,7 @@ def test_no_claims_verdict(tmp_path):
     report = build_report(SNAPSHOT, [], findings, [], tmp_path)
     assert "NO CLAIMS" in report
     comment = build_comment(SNAPSHOT, [], findings, [])
-    assert "NO CLAIMS" in comment
+    assert "No claims" in comment
 
 
 def test_verdict_precedence():
@@ -138,6 +138,6 @@ def test_post_comment_default_lists_paginated_and_posts_dash_f():
 
 def test_build_comment_summary_badges():
     comment = build_comment(SNAPSHOT, CLAIMS, FINDINGS, ANSWERS)
-    assert "Bugs:" in comment
+    assert "Risks found:" in comment
     assert "Doc errors:" in comment
     assert "background-color" in comment
