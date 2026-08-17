@@ -51,9 +51,12 @@ all-auto).
 
 A dedicated `/config` page holds the config management block (separate from the repo dashboard at `/`):
 
-- `/` additionally lists auto-configured repos without review data (AUTO badge cards); **Block 1 — Repo config**: org header + global badges (interval, drafts,
-  post_comment); table of org repos with Auto/Manual toggle, Remove button for
-  listed repos, "Enable auto" for unlisted repos; "Add repo" form; "Refresh".
+- `/` lists reviewed repos (from sessions) plus auto-configured repos
+  without review data (AUTO badge cards).
+- The dedicated `/config` page holds the repo config UI: org header + global
+  badges (interval, drafts, post_comment); table of org repos with Auto/Manual
+  toggle, Remove button for listed repos, "Enable auto" for unlisted repos;
+  "Add repo" form; "Refresh".
 (The repo dashboard at `/` shows reviewed repos from sessions; the config page is standalone.)
 
 New API routes:
