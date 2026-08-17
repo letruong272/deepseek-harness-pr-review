@@ -39,13 +39,14 @@ in the UI instead of a bare error alert.
 
 ## Part 4 — UI
 
-- Repo page row with status `reviewing` → `Reviewing… (PID 12345, started 2m
-  ago)` — `metrics.open_prs` reads lock JSON to add `pid`/`started_at`
+- Repo page row with status `reviewing` → `Reviewing… (PID 12345, started
+  2026-08-16T16:08:00)` — `metrics.open_prs` reads lock JSON to add
+  `pid`/`started_at` (raw timestamp; elapsed-ago formatting not implemented)
 - Trigger while running → inline message (no alert): fetch status, render
   "Review already running — PID …, started …" next to the button
 - **Review log panel**: when reviewing (or after clicking Review now), show a
   dark `<pre>` panel with the log tail; auto-refresh every 3s while
-  `running: true`; stops when done; collapsible
+  `running: true`; stops when done (no user collapsible control)
 - Repo page shows a live log panel (3s polling) for reviewing rows; the raw `started_at` timestamp is shown next to the PID (elapsed-ago formatting not implemented)
 
 ## Testing
