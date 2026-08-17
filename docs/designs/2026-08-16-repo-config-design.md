@@ -54,7 +54,7 @@ A dedicated `/config` page holds the config management block (separate from the 
 - **Block 1 — Repo config**: org header + global badges (interval, drafts,
   post_comment); table of org repos with Auto/Manual toggle, Remove button for
   listed repos, "Enable auto" for unlisted repos; "Add repo" form; "Refresh".
-- **Block 2 — Reviewed repos**: existing dashboard (sessions data).
+(The repo dashboard at `/` shows reviewed repos from sessions; the config page is standalone.)
 
 New API routes:
 - `GET /api/config` — current config + org repos with per-repo mode
@@ -80,6 +80,6 @@ New API routes:
 - `tests/test_autoreview_config.py`: set_repo_mode add/change, remove_repo,
   list_repos with fake gh, backward compat, corrupt YAML error
 - `tests/test_server.py`: POST mode writes real temp config, DELETE removes,
-  GET /api/config returns org repos + modes (fake gh), add missing repo → 400
+  GET /api/config returns org repos + modes (fake gh), toggle/add/remove write the real config file
 - `tests/test_autoreview.py`: poller skips non-auto repos, `--repos` output
 - Manual E2E: run server, toggle repo on demo org

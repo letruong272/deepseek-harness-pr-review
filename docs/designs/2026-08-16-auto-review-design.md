@@ -91,7 +91,7 @@ marked comment), so re-review never spams.
 
 - `test_autoreview.py`: fake gh (PR lists + head SHAs) + fixture sessions dir →
   assert correct NEW / RE-RUN / SKIPPED selection, log statuses, lock file
-  behavior, missing-repo config error
+  behavior, stale-lock takeover, skip-bot filtering
 - `test_snapshot.py`: extend fixture with `head_sha` assertion
 - E2E: `--once --dry-run` against real gh prints PRs that would be reviewed
   without dispatching
