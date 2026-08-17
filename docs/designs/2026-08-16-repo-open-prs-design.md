@@ -21,7 +21,7 @@ Table columns: `# | Title | Draft | Review status | Risks | Doc errors`
   - `Reviewing…` — session dir exists but findings.json missing (in progress)
   - `Reviewed · N rounds` — findings.json exists, N from rounds.txt (fallback 1)
 - Merged/closed PRs with sessions are NOT shown in the table but still counted in KPIs
-- KPI cards stay, label clarified: "Risks (based on N reviewed PRs)"
+- KPI cards stay, label clarified: "RISKS FOUND (based on N reviewed PRs)"
 - Draft badge shown; gh failure → table shows reviewed PRs only + "open PRs unavailable" badge
 - Sort: open PRs by number desc (newest first)
 
