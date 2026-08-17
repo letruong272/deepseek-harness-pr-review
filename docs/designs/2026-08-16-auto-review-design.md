@@ -74,8 +74,8 @@ marked comment), so re-review never spams.
 
 ## Error Handling
 
-- `gh api` failure (auth, rate limit) → log `POLL-ERROR`, abort this pass (no
-  hot retry), next pass retries
+- `gh api` failure (auth, rate limit) → log `POLL-ERROR` for that repo and
+  continue to the next repo (no hot retry); the next pass retries
 - One PR failing (model/agent error) → log `FAILED`, continue with other PRs
 - Lock file `autoreview.lock` — prevents two concurrent pollers (daemon + cron)
 - Missing API key → clear error at startup, exit 3 (consistent with run.py)
