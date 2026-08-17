@@ -1,0 +1,11 @@
+# Copy this file to autoreview.yml (it is gitignored — keep your real repos private).
+org: your-org                # default org for repo discovery
+default_mode: manual         # repos not listed → manual
+interval_minutes: 2
+post_comment: true
+skip_human: true
+drafts: false
+skip_bots: true              # skip bot PRs (Renovate/Dependabot) in auto review
+repos:
+  your-repo: auto            # auto-review this repo's PRs
+  another-repo: manual       # skip in poller; review via CLI/UI

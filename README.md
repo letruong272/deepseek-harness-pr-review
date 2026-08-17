@@ -178,25 +178,29 @@ batch mode. Each repo is configured `auto` (poller reviews its PRs) or `manual`
 (poller skips it; review via CLI). Edit `autoreview.yml` directly, via CLI, or
 from the web dashboard (Config page → toggle Auto/Manual).
 
+`autoreview.yml` is gitignored — copy `autoreview.yml.example` and fill in your
+repos. Repo names stay private.
+
 ```yaml
-# autoreview.yml
-org: sample-org            # default org for repo discovery
-default_mode: manual        # repos not listed → manual
+# autoreview.yml (copy from autoreview.yml.example)
+org: your-org            # default org for repo discovery
+default_mode: manual     # repos not listed → manual
 interval_minutes: 2
 post_comment: true
 skip_human: true
 drafts: false
+skip_bots: true          # skip bot PRs (Renovate/Dependabot)
 repos:
-  sample-app: auto
-  sample-api: manual
+  your-repo: auto
+  another-repo: manual
 ```
 
 ```bash
-python -m src.autoreview --add-repo sample-app --mode auto   # enable auto
-python -m src.autoreview --rm-repo sample-app                # remove
-python -m src.autoreview --repos                             # list status
-python -m src.autoreview --once          # single pass (cron/launchd)
-python -m src.autoreview --daemon        # loop every interval_minutes
+autoreview --add-repo sample-app --mode auto   # enable auto
+autoreview --rm-repo sample-app                # remove
+autoreview --repos                             # list status
+autoreview --once          # single pass (cron/launchd)
+autoreview --daemon        # loop every interval_minutes
 ```
 
 launchd example (auto-start on login, every 2 minutes):

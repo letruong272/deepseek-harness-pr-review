@@ -13,3 +13,4 @@ dist/
 autoreview.log
 autoreview.lock
 **/.DS_Store
+autoreview.yml
