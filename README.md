@@ -39,7 +39,7 @@ status. Live demo data is included — see [Web dashboard](#web-dashboard).
 | ✅ **Requirement impact** | `CHANGED / BROKEN / RISK` analysis per business requirement |
 | ✅ **Human-in-the-loop** | ≤20-word confirmation questions only when uncertain — no guessing |
 | ✅ **Auto review poller** | Reviews new PRs automatically, re-reviews when the head commit changes |
-| ✅ **Web dashboard** | Repo config management, review triggers (Review now), live review logs, metrics: bugs, doc errors, verdicts, review rounds per repo |
+| ✅ **Web dashboard** | Repo config management, review triggers (Review now), live review logs, metrics: risks found, doc errors, verdicts, review rounds per repo |
 | ✅ **Idempotent PR comments** | One English comment per PR, updated in place — never duplicated |
 | ✅ **Traceable** | Every phase writes structured JSON to `sessions/` |
 
@@ -149,7 +149,7 @@ python -m pytest -v
 
 ## Web dashboard
 
-Read-only dashboard for review metrics (PRs reviewed, bugs, doc errors, verdicts
+Read-only dashboard for review metrics (PRs reviewed, risks found, doc errors, verdicts
 per repo). Reads `sessions/` directly — no database.
 
 ```bash
@@ -161,7 +161,7 @@ harness-pr-review web   # open http://127.0.0.1:6789
 Pages: repo list → repo detail (KPIs + verdict donut + PR table) → PR detail
 (tabs: Claims / Docs / Impact / Threads / Confirm). The PR table lists ALL open
 PRs from GitHub with review status (Not reviewed / Reviewing / Reviewed N
-rounds); Bugs counts FAIL + PARTIAL claims and BROKEN + RISK impacts; Doc
+rounds); Risks counts FAIL + PARTIAL claims and BROKEN + RISK impacts; Doc
 errors counts WRONG + FABRICATED + STALE docs. Each open PR row has a
 **Review now** / **Re-review** button that runs the review synchronously using
 the repo's auto-review config (skip-human + post-comment flags from

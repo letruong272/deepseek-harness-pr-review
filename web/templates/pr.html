@@ -29,7 +29,10 @@
   <a class="gh-link" target="_blank" rel="noopener"
      href="https://github.com/{{ repo_owner }}/{{ repo_name }}/pull/{{ detail.pr.pr }}">Open on GitHub ↗</a></h1>
 <p class="muted">{{ detail.pr.author }} · {{ detail.pr.base }} → {{ detail.pr.head }}</p>
-<span class="verdict v-{{ detail.pr.verdict|lower }}">{{ detail.pr.verdict }}</span>
+<span class="verdict v-{{ detail.pr.verdict|lower }}">{{
+  {'ACCURATE': 'Description accurate', 'PARTIAL': 'Description partial',
+   'MISLEADING': 'Description misleading', 'NO_CLAIMS': 'No claims'}.get(
+      detail.pr.verdict, detail.pr.verdict) }}</span>
 <span class="verdict v-fail">Risks found: {{ detail.pr.bugs }}</span>
 <span class="verdict v-wrong">Doc errors: {{ detail.pr.doc_errors }}</span>
 <p class="muted breakdown">

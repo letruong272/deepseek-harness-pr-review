@@ -7,12 +7,12 @@
 
 Fix `/repos/{owner}/{repo}` so it lists ALL open PRs (not just reviewed ones),
 shows each PR's review status (not reviewed / reviewing / reviewed N rounds),
-and corrects the Bugs / Doc errors numbers so they match what the PR detail page
+and corrects the Risks / Doc errors numbers so they match what the PR detail page
 shows.
 
 ## Part 1 — Repo page table (all open PRs)
 
-Table columns: `# | Title | Draft | Review status | Bugs | Doc errors`
+Table columns: `# | Title | Draft | Review status | Risks | Doc errors`
 
 - Source of open PRs: `gh api repos/{o}/{r}/pulls?state=open`
   (reuse `autoreview.fetch_open_prs`)
@@ -21,7 +21,7 @@ Table columns: `# | Title | Draft | Review status | Bugs | Doc errors`
   - `Reviewing…` — session dir exists but findings.json missing (in progress)
   - `Reviewed · N rounds` — findings.json exists, N from rounds.txt (fallback 1)
 - Merged/closed PRs with sessions are NOT shown in the table but still counted in KPIs
-- KPI cards stay, label clarified: "Bugs (based on N reviewed PRs)"
+- KPI cards stay, label clarified: "Risks (based on N reviewed PRs)"
 - Draft badge shown; gh failure → table shows reviewed PRs only + "open PRs unavailable" badge
 - Sort: open PRs by number desc (newest first)
 
@@ -35,10 +35,10 @@ Table columns: `# | Title | Draft | Review status | Bugs | Doc errors`
 - Manual run without `--force` (cache hit) → no increment
 
 **Broader metrics (`web/metrics.py`):**
-- `bugs` = claims `FAIL` + `PARTIAL` + impact `BROKEN` + `RISK`
+- `risks` = claims `FAIL` + `PARTIAL` + impact `BROKEN` + `RISK` (internal key: bugs)
 - `doc_errors` = docs `WRONG` + `FABRICATED` + `STALE`
 - Real pr-77 fixture: 10 claims (1 PARTIAL), 4 docs (2 STALE), 5 impact (2 RISK)
-  → bugs = 3, doc_errors = 2
+  → risks = 3, doc_errors = 2
 
 **Data flow:**
 - `metrics.pr_record` adds `rounds` (from rounds.txt, fallback 1)
