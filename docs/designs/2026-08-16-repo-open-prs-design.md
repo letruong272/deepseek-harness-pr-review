@@ -38,7 +38,7 @@ Table columns: `# | Title | Draft | Review status | Risks | Doc errors`
 - `risks` = claims `FAIL` + `PARTIAL` + impact `BROKEN` + `RISK` (internal key: bugs)
 - `doc_errors` = docs `WRONG` + `FABRICATED` + `STALE`
 - Demo fixture (tests/test_metrics.py): claims PARTIAL/RISK/STALE combinations assert the counting rules
-  → risks = 3, doc_errors = 2
+  → risks = 3, doc_errors = 2 (covered by test_metrics.py::test_pr_record_wider_metrics)
 
 **Data flow:**
 - `metrics.pr_record` adds `rounds` (from rounds.txt, fallback 1)
