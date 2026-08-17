@@ -176,7 +176,7 @@ MISLEADING verdict + FABRICATED doc), useful for screenshots and documentation.
 Poll GitHub for new PRs (and head-SHA changes) and review them automatically in
 batch mode. Each repo is configured `auto` (poller reviews its PRs) or `manual`
 (poller skips it; review via CLI). Edit `autoreview.yml` directly, via CLI, or
-from the web dashboard (repo list page → toggle Auto/Manual).
+from the web dashboard (Config page → toggle Auto/Manual).
 
 ```yaml
 # autoreview.yml

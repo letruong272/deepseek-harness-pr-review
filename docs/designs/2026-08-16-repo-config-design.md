@@ -7,7 +7,7 @@
 
 Allow per-repo control of auto review: each repo in an org (or any repo the user
 adds) can be set to `auto` (poller reviews its PRs) or `manual` (poller skips it;
-review via CLI). The config is editable both from the web dashboard (repo list
+review via CLI). The config is editable both from the web dashboard (dedicated /config
 page) and the CLI — both write the same `autoreview.yml`.
 
 ## Config format (`autoreview.yml`)
