@@ -74,3 +74,6 @@ a.card.auto { border-style: dashed; }
 .review-cell { display: inline-flex; align-items: center; gap: 10px;
                white-space: nowrap; }
 .review-cell .gh-link { margin-left: 0; }
+.tag.auto { background: #27ae60; }
+.tag.manual { background: #6b7280; }
+.tag.unlisted { background: #a0a6ad; }

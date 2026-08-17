@@ -101,6 +101,25 @@ def repo_page(request: Request, owner: str, repo: str):
                     "NO_CLAIMS": 0}, "prs": [], "has_data": False}
     else:
         rec["has_data"] = True
+
+    # mode từ autoreview.yml (auto/manual/unlisted) — hiển thị trên title
+    repo_mode = "unlisted"
+    cfg_path = _config_path()
+    if cfg_path.exists():
+        try:
+            from src.autoreview_config import load_config as load_acfg
+
+            acfg = load_acfg(cfg_path)
+            org = acfg.get("org", "")
+            key = repo if "/" in repo else f"{owner}/{repo}"
+            repo_mode = acfg["repos"].get(key) or acfg["repos"].get(repo)
+            if repo_mode is None and org and org == owner:
+                repo_mode = acfg["repos"].get(repo)
+            repo_mode = repo_mode or "unlisted"
+        except (ValueError, OSError):
+            pass
+    rec["mode"] = repo_mode
+
     verdict_json = json.dumps(rec["verdict_count"])
     open_qs = sum(p["open_questions"] for p in rec["prs"])
 

@@ -443,3 +443,33 @@ def test_review_log_api_live_lines(tmp_path, monkeypatch):
     r = client.get("/api/repos/sample-org/sample-app/pr/78/review/log?lines=200")
     assert r.status_code == 200
     assert r.json()["log"] == "line1\nline2"
+
+
+def test_repo_page_shows_mode_badge(tmp_path, monkeypatch):
+    cfg_path = tmp_path / "autoreview.yml"
+    cfg_path.write_text("org: sample-org\nrepos:\n  sample-app: auto\n")
+    monkeypatch.setenv("AUTOREVIEW_CONFIG", str(cfg_path))
+    monkeypatch.setenv("DSH_SESSION_ROOT", str(tmp_path / "sessions"))
+    monkeypatch.setattr("src.gh.run_gh",
+                        lambda args, **kw: [{"number": 78, "title": "T",
+                                             "draft": False}] if "pulls" in args[1]
+                        else {"full_name": "sample-org/sample-app"})
+    client = TestClient(app)
+    resp = client.get("/repos/sample-org/sample-app")
+    assert resp.status_code == 200
+    assert "AUTO" in resp.text
+
+
+def test_repo_page_mode_manual(tmp_path, monkeypatch):
+    cfg_path = tmp_path / "autoreview.yml"
+    cfg_path.write_text("org: sample-org\nrepos:\n  sample-app: manual\n")
+    monkeypatch.setenv("AUTOREVIEW_CONFIG", str(cfg_path))
+    monkeypatch.setenv("DSH_SESSION_ROOT", str(tmp_path / "sessions"))
+    monkeypatch.setattr("src.gh.run_gh",
+                        lambda args, **kw: [{"number": 78, "title": "T",
+                                             "draft": False}] if "pulls" in args[1]
+                        else {"full_name": "sample-org/sample-app"})
+    client = TestClient(app)
+    resp = client.get("/repos/sample-org/sample-app")
+    assert resp.status_code == 200
+    assert "MANUAL" in resp.text

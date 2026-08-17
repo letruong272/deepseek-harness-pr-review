@@ -5,7 +5,7 @@
 {% endblock %}
 {% block content %}
 <h1>{{ repo.owner }}/{{ repo.repo }}
-  {% if not repo.has_data %}<span class="tag auto">AUTO</span>{% endif %}</h1>
+  <span class="tag {{ repo.mode }}">{{ repo.mode|upper }}</span></h1>
 {% if not repo.has_data %}<p class="muted">No reviews yet — new PRs are
 reviewed automatically. Click <b>Review now</b> to run the first one.</p>{% endif %}
 
