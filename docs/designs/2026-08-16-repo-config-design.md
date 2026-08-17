@@ -51,7 +51,7 @@ all-auto).
 
 A dedicated `/config` page holds the config management block (separate from the repo dashboard at `/`):
 
-- **Block 1 — Repo config**: org header + global badges (interval, drafts,
+- `/` additionally lists auto-configured repos without review data (AUTO badge cards); **Block 1 — Repo config**: org header + global badges (interval, drafts,
   post_comment); table of org repos with Auto/Manual toggle, Remove button for
   listed repos, "Enable auto" for unlisted repos; "Add repo" form; "Refresh".
 (The repo dashboard at `/` shows reviewed repos from sessions; the config page is standalone.)
@@ -72,7 +72,7 @@ New API routes:
 - Concurrent UI+CLI writes → atomic write (temp + rename); poller reads config
   once per pass
 - Add non-existent repo → HTTP 400 with clear message *(not implemented — repo existence is not validated on add)*
-- API errors: `{detail: "..."}` HTTP 400/404, inline message in UI
+- API errors: `{detail: "..."}` HTTP 400/404, surfaced via `alert()` in the config page JS
 
 ## Testing
 
