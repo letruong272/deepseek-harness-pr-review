@@ -145,7 +145,9 @@ def test_run_pass_skips_manual_review_lock(tmp_path, monkeypatch, capsys):
     cfg = load_config(cfg_path)
     lock = root / "sample-org" / "sample-api" / "pr-1" / "review.lock"
     lock.parent.mkdir(parents=True)
-    lock.touch()
+    # PID sống = review đang thật sự chạy (đúng thứ run.py ghi ra)
+    lock.write_text(json.dumps({"pid": os.getpid(),
+                                "started_at": "2026-08-18T00:00:00"}))
 
     dispatched = []
     monkeypatch.setattr("src.autoreview._dispatch",
@@ -291,3 +293,158 @@ def test_main_add_repo_bare_name_uses_org(tmp_path, monkeypatch):
     code = main(["--add-repo", "sample-app2", "--mode", "auto"])
     assert code == 0
     assert load_config(cfg_path)["repos"]["sample-app2"] == "auto"
+
+
+def test_run_pass_parallel_runs_prs_concurrently(tmp_path, monkeypatch):
+    """max_parallel > 1 → các PR chạy chồng nhau, không phải nối đuôi."""
+    import threading
+    import time as _time
+
+    from src.autoreview import _repo_failures
+
+    _repo_failures.clear()
+    root = tmp_path / "sessions"
+    root.mkdir(parents=True)
+    cfg_path = tmp_path / "autoreview.yml"
+    cfg_path.write_text("org: sample-org\nrepos:\n  app: auto\nmax_parallel: 3\n")
+    cfg = load_config(cfg_path)
+
+    def fake_gh(args, **kw):
+        return [{"number": i, "head": {"sha": "a"}, "draft": False}
+                for i in (1, 2, 3)]
+
+    live = []
+    peak = []
+    guard = threading.Lock()
+
+    def fake_dispatch(c, o, r, n, sha):
+        with guard:
+            live.append(n)
+            peak.append(len(live))
+        _time.sleep(0.2)
+        with guard:
+            live.remove(n)
+        return 0
+
+    monkeypatch.setattr("src.autoreview._dispatch", fake_dispatch)
+
+    started = _time.monotonic()
+    count = run_pass(cfg, root, dry_run=False, gh=fake_gh)
+    elapsed = _time.monotonic() - started
+
+    assert count == 3
+    assert max(peak) == 3          # cả 3 chạy cùng lúc
+    assert elapsed < 0.5           # tuần tự sẽ là ~0.6s
+
+
+def test_run_pass_sequential_by_default(tmp_path, monkeypatch):
+    """Không cấu hình max_parallel → 1 review một lúc (hành vi cũ)."""
+    import threading
+
+    from src.autoreview import _repo_failures
+
+    _repo_failures.clear()
+    root = tmp_path / "sessions"
+    root.mkdir(parents=True)
+    cfg_path = tmp_path / "autoreview.yml"
+    cfg_path.write_text("org: sample-org\nrepos:\n  app: auto\n")
+    cfg = load_config(cfg_path)
+    assert cfg["max_parallel"] == 1
+
+    def fake_gh(args, **kw):
+        return [{"number": i, "head": {"sha": "a"}, "draft": False}
+                for i in (1, 2, 3)]
+
+    live = []
+    peak = []
+    guard = threading.Lock()
+
+    def fake_dispatch(c, o, r, n, sha):
+        with guard:
+            live.append(n)
+            peak.append(len(live))
+            live.remove(n)
+        return 0
+
+    monkeypatch.setattr("src.autoreview._dispatch", fake_dispatch)
+    assert run_pass(cfg, root, dry_run=False, gh=fake_gh) == 3
+    assert max(peak) == 1
+
+
+def test_run_pass_parallel_counts_only_successes(tmp_path, monkeypatch):
+    """Một PR lỗi khi chạy song song → không chặn PR khác, không bị đếm."""
+    from src.autoreview import _repo_failures
+
+    _repo_failures.clear()
+    root = tmp_path / "sessions"
+    root.mkdir(parents=True)
+    cfg_path = tmp_path / "autoreview.yml"
+    cfg_path.write_text("org: sample-org\nrepos:\n  app: auto\nmax_parallel: 3\n")
+    cfg = load_config(cfg_path)
+
+    def fake_gh(args, **kw):
+        return [{"number": i, "head": {"sha": "a"}, "draft": False}
+                for i in (1, 2, 3)]
+
+    def fake_dispatch(c, o, r, n, sha):
+        if n == 2:
+            raise RuntimeError("boom")
+        return 0 if n == 1 else 1  # #3 exit khác 0
+
+    monkeypatch.setattr("src.autoreview._dispatch", fake_dispatch)
+    assert run_pass(cfg, root, dry_run=False, gh=fake_gh) == 1
+
+
+def test_run_pass_reclaims_stale_review_lock(tmp_path, monkeypatch, capsys):
+    """Review trước bị kill (timeout/crash) → lock chết KHÔNG được skip.
+
+    Poller là đường duy nhất chạm tới PR đó; skip trên lock chết sẽ treo PR
+    vĩnh viễn. Tiến trình con mới là nơi thu hồi lock.
+    """
+    root = tmp_path / "sessions"
+    root.mkdir(parents=True)
+    cfg_path = tmp_path / "autoreview.yml"
+    cfg_path.write_text("org: sample-org\nrepos:\n  sample-api: auto\n")
+    cfg = load_config(cfg_path)
+
+    dead = os.fork()
+    if dead == 0:
+        os._exit(0)
+    os.waitpid(dead, 0)
+
+    lock = root / "sample-org" / "sample-api" / "pr-1" / "review.lock"
+    lock.parent.mkdir(parents=True)
+    lock.write_text(json.dumps({"pid": dead, "started_at": "2026-08-18T00:00:00"}))
+
+    dispatched = []
+    monkeypatch.setattr("src.autoreview._dispatch",
+                        lambda c, o, r, n, sha: (dispatched.append((o, r, n)) or 0))
+    count = run_pass(cfg, root, dry_run=False,
+                     gh=lambda args, **kw: [{"number": 1, "head": {"sha": "a"},
+                                             "draft": False}])
+    assert count == 1
+    assert dispatched == [("sample-org", "sample-api", 1)]
+    out = capsys.readouterr().out
+    assert "STALE-LOCK" in out
+    assert "manual review running" not in out
+
+
+def test_run_pass_skips_corrupt_review_lock_as_stale(tmp_path, monkeypatch):
+    """review.lock rác cũng là stale — không được treo PR."""
+    root = tmp_path / "sessions"
+    root.mkdir(parents=True)
+    cfg_path = tmp_path / "autoreview.yml"
+    cfg_path.write_text("org: sample-org\nrepos:\n  sample-api: auto\n")
+    cfg = load_config(cfg_path)
+
+    lock = root / "sample-org" / "sample-api" / "pr-1" / "review.lock"
+    lock.parent.mkdir(parents=True)
+    lock.write_text("not json")
+
+    dispatched = []
+    monkeypatch.setattr("src.autoreview._dispatch",
+                        lambda c, o, r, n, sha: (dispatched.append(n) or 0))
+    assert run_pass(cfg, root, dry_run=False,
+                    gh=lambda args, **kw: [{"number": 1, "head": {"sha": "a"},
+                                            "draft": False}]) == 1
+    assert dispatched == [1]

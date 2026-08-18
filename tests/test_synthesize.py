@@ -1,4 +1,6 @@
-from src.synthesize import _overall_verdict, build_comment, build_report, post_comment
+from src.synthesize import (_overall_verdict, build_comment, build_ping,
+                            build_report, find_report_comment, post_comment,
+                            post_ping, summary_counts)
 
 SNAPSHOT = {
     "owner": "demo", "repo": "app", "pr": 7,
@@ -145,3 +147,148 @@ def test_build_comment_summary_badges():
     assert "Risks found:" in comment
     assert "Doc errors:" in comment
     assert "background-color" in comment
+
+
+def _snap(**kw):
+    base = {"owner": "o", "repo": "r", "pr": 9, "title": "t", "body": "",
+            "author": "a", "base": "main", "head": "x", "head_sha": "1930e24abc",
+            "labels": [], "files": [], "commits": [], "threads": []}
+    base.update(kw)
+    return base
+
+
+EMPTY = {"claims": [], "docs": [], "impact": [], "threads": [],
+         "unresolved_questions": []}
+
+
+def test_comment_states_the_review_finished():
+    """Comment được PATCH tại chỗ nên GitHub không báo — phải tự nói là đã xong."""
+    body = build_comment(_snap(), [], EMPTY, [], rounds=3,
+                         completed_at="2026-08-18 11:02 UTC")
+    assert "Review complete" in body
+    assert "2026-08-18 11:02 UTC" in body     # biết là mới hay cũ
+    assert "round 3" in body
+    assert "`1930e24`" in body                 # biết review đúng commit nào
+    assert "updated in place" in body          # biết vì sao không có notification
+
+
+def test_completion_line_sits_above_the_collapsed_sections():
+    """Phải nằm trên các <details> vì chúng mặc định đóng."""
+    body = build_comment(_snap(), [], EMPTY, [], completed_at="x")
+    assert body.index("Review complete") < body.index("<details")
+
+
+def _completion_line_of(body: str) -> str:
+    """Chỉ lấy dòng completion — header badge có `background-color` (chứa
+    'round') nên assert trên cả header là bẫy."""
+    return next(ln for ln in body.splitlines() if ln.startswith("✅"))
+
+
+def test_completion_line_survives_missing_metadata():
+    """Không có rounds.txt / head_sha → vẫn báo hoàn thành, không vỡ."""
+    body = build_comment(_snap(head_sha=""), [], EMPTY, [], rounds=None,
+                         completed_at="2026-08-18 11:02 UTC")
+    line = _completion_line_of(body)
+    assert "Review complete" in line
+    assert "2026-08-18 11:02 UTC" in line
+    assert "round" not in line
+    assert "commit `" not in line
+
+
+def test_completion_timestamp_defaults_to_now():
+    import time
+
+    body = build_comment(_snap(), [], EMPTY, [])
+    assert time.strftime("%Y-%m-%d", time.gmtime()) in body
+    assert "UTC" in body
+
+
+# --- round ping -------------------------------------------------------------
+
+PING_FINDINGS = {
+    "claims": [{"status": "PASS"}] * 12 + [{"status": "PARTIAL"}]
+              + [{"status": "UNVERIFIED"}] * 2,
+    "docs": [{"status": "STALE"}, {"status": "WRONG"}, {"status": "MATCH"}],
+    "impact": [{"impact": "RISK"}, {"impact": "CHANGED"}],
+    "threads": [], "unresolved_questions": [],
+}
+
+
+def test_ping_marker_is_not_confused_with_main_marker():
+    """post_comment PATCH comment đầu tiên chứa MARKER.
+
+    Nếu MARKER là substring của PING_MARKER, báo cáo đầy đủ sẽ đè lên ping và
+    ping vòng trước biến mất. Ràng buộc này phải được ghim lại.
+    """
+    from src.synthesize import MARKER, PING_MARKER
+
+    assert MARKER not in PING_MARKER
+    assert PING_MARKER not in MARKER
+    ping = build_ping(_snap(), PING_FINDINGS, rounds=1, completed_at="t")
+    assert MARKER not in ping
+
+
+def test_ping_carries_the_headline_numbers():
+    ping = build_ping(_snap(), PING_FINDINGS, rounds=3,
+                      completed_at="2026-08-18 11:02 UTC")
+    assert "round 3" in ping
+    assert "`1930e24`" in ping            # commit đã review
+    assert "2026-08-18 11:02 UTC" in ping
+    assert "**2** risks" in ping          # 1 PARTIAL + 1 RISK impact
+    assert "**2** doc errors" in ping     # STALE + WRONG, MATCH không tính
+    assert "15 claims" in ping
+    assert "12 matches" in ping and "1 partial" in ping and "2 unverified" in ping
+
+
+def test_ping_numbers_match_the_full_comment():
+    """Ping và comment đầy đủ phải cùng một nguồn số, không được lệch."""
+    counts = summary_counts(PING_FINDINGS)
+    body = build_comment(_snap(), [], PING_FINDINGS, [], completed_at="t")
+    ping = build_ping(_snap(), PING_FINDINGS, completed_at="t")
+    assert f"Risks found: {counts['risks']}" in body
+    assert f"**{counts['risks']}** risk" in ping
+    assert f"Doc errors: {counts['doc_errors']}" in body
+    assert f"**{counts['doc_errors']}** doc error" in ping
+
+
+def test_ping_singular_plural():
+    one = {"claims": [{"status": "PARTIAL"}], "docs": [{"status": "STALE"}],
+           "impact": [], "threads": [], "unresolved_questions": []}
+    ping = build_ping(_snap(), one, completed_at="t")
+    assert "**1** risk ·" in ping and "**1** risks" not in ping
+    assert "**1** doc error ·" in ping
+    assert "1 claim (" in ping
+
+
+def test_ping_posts_a_new_comment_every_round():
+    """Ping KHÔNG idempotent — comment mới mỗi vòng mới có notification."""
+    seen = []
+    post_ping("demo", "app", 7, "body-round-1", gh=lambda a, **k: seen.append(a))
+    post_ping("demo", "app", 7, "body-round-2", gh=lambda a, **k: seen.append(a))
+    assert len(seen) == 2
+    for args in seen:
+        assert args[:2] == ["api", "repos/demo/app/issues/7/comments"]
+        assert "PATCH" not in args
+
+
+def test_find_report_comment_ignores_pings():
+    from src.synthesize import MARKER, PING_MARKER
+
+    comments = [{"id": 1, "body": f"ping\n{PING_MARKER}", "html_url": "u1"},
+                {"id": 2, "body": f"report\n{MARKER}", "html_url": "u2"}]
+    found = find_report_comment("demo", "app", 7,
+                                list_comments=lambda: comments)
+    assert found["id"] == 2
+
+
+def test_post_comment_updates_report_not_ping():
+    """Có ping trong thread → PATCH vẫn phải trúng comment báo cáo."""
+    from src.synthesize import MARKER, PING_MARKER
+
+    comments = [{"id": 1, "body": f"ping\n{PING_MARKER}"},
+                {"id": 2, "body": f"report\n{MARKER}"}]
+    seen = []
+    posted = post_comment("demo", "app", 7, "new", gh=lambda a, **k: seen.append(a),
+                          list_comments=lambda: comments)
+    assert posted is False
+    assert "repos/demo/app/issues/comments/2" in seen[0][1]

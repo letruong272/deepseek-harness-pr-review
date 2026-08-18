@@ -72,6 +72,27 @@ from the session dir, then call `run.main([..., "--force"])` so all 5 phases run
 fresh with the new head. `post_comment` is already idempotent (updates the single
 marked comment), so re-review never spams.
 
+The flip side of editing in place is that GitHub raises no notification for it,
+so a reader cannot tell a finished re-review from the round before it. Two
+things address that:
+
+1. The report comment opens with a `Review complete` line: timestamp, round
+   number and the short head SHA reviewed. The SHA answers the question people
+   actually have — did this cover my latest push? This helps only once someone
+   opens the PR.
+2. A **round ping** — a short NEW comment per round (`post_ping`, marker
+   `<!-- harness-pr-review-ping -->`). Being new is the whole point: that is
+   what GitHub notifies on. It carries verdict, risk count, doc-error count and
+   the claim breakdown, plus a link up to the report comment.
+
+`PING_MARKER` is deliberately not a superstring of `MARKER`. `post_comment`
+PATCHes the first comment containing `MARKER`, so a ping carrying it would be
+overwritten by the next full report and the round log would silently vanish.
+
+Both counts come from `summary_counts()` so the ping and the report cannot
+drift apart. A failing ping is logged and swallowed: losing a notification is
+annoying, losing the review because the notification failed is worse.
+
 ## Error Handling
 
 - `gh api` failure (auth, rate limit) → log `POLL-ERROR` for that repo and
@@ -81,11 +102,38 @@ marked comment), so re-review never spams.
   `(skipping: N consecutive failures)` so a dead repo stops looking like a new
   incident every pass. A successful fetch resets the counter to 0
 - One PR failing (model/agent error) → log `FAILED`, continue with other PRs
+- A review that hangs → killed after `review_timeout_minutes` (default 30) and
+  logged as a timeout, so it cannot hold a parallel slot forever. Its
+  `review.lock` holds a dead PID and is reclaimed on the next attempt
 - Lock file `autoreview.lock` — prevents two concurrent pollers (daemon + cron).
   Dead PID → reclaimed. Alive PID but the lock is older than 4h → PID reuse or a
   hung pass, so it is stolen with a warning. Unparseable lock → reclaimed with a
   warning (returning "held" there would wedge the poller silently forever)
 - Missing API key → clear error at startup, exit 3 (consistent with run.py)
+
+## Parallelism
+
+Each review runs as its own process (`python -m src.run`, see
+`src/review_proc.py`), never in the poller's or the web server's interpreter.
+That is what makes concurrency possible at all: the old in-process path used
+`contextlib.redirect_stdout`, which mutates `sys.stdout` for the whole
+interpreter, so two reviews would interleave their logs and the second to
+finish would restore a stream the first had already closed. A subprocess also
+makes `review.lock` record the review's own PID instead of the long-lived
+server's, so a review that dies is correctly seen as dead.
+
+- `max_parallel` (default `1`, cap `8`) — reviews running at once in one pass.
+  `1` keeps the old strictly-sequential behaviour.
+- A pass plans every repo first (sequential `gh` calls, cheap), then fans the
+  queued PRs out through a `ThreadPoolExecutor`. Threads are fine because the
+  work is a blocked `subprocess.run`, not Python.
+- Safe because `review.lock` is per-PR and each PR has its own workspace: two
+  different PRs share nothing. The same PR is still limited to one review.
+- The real ceiling is model API concurrency, not CPU — measured on this repo,
+  a review spends ~80% of its wall time waiting on the model (verify phase
+  7m22s of a 9m12s run). Measured: PRs #4 and #5 reviewed concurrently
+  finished in 299s wall versus 524s summed, with separate logs and both locks
+  released.
 
 ## Scheduling (macOS)
 

@@ -25,10 +25,15 @@ inconsistent. This tool runs a DeepSeek Harness agent that:
 
 ## Demo
 
-[![Dashboard demo](docs/screenshots/dashboard-demo.png)](docs/screenshots/dashboard-demo.png)
+[![Dashboard: PR review with claim-by-claim evidence](docs/screenshots/dashboard-demo.png)](docs/screenshots/dashboard-demo.png)
 
-Dashboard: per-repo KPIs, verdict distribution, and every open PR with review
-status. Live demo data is included — see [Web dashboard](#web-dashboard).
+The tool reviewing its own PR #9. Every sentence of the description became a
+numbered claim, each checked against the real code with `file:line` evidence —
+and the header is honest about what it found: description partial, 2 risks,
+2 stale docs. Tabs split claims, docs, requirement impact and review threads.
+
+Repo-level pages (KPIs, verdict distribution, every open PR with review status)
+and live demo data are included — see [Web dashboard](#web-dashboard).
 
 ## Features
 
@@ -144,7 +149,15 @@ Results land in `sessions/<owner>/<repo>/pr-<n>/report.md` (change the directory
    verifies each claim, docs reality-check (MATCH/STALE/WRONG/FABRICATED),
    requirement impact, review thread status
 4. **Human gate** — asks for confirmation (≤20 words/question) when docs are wrong or claims are uncertain
-5. **Synthesize** — English report.md + one English comment on the PR (idempotent)
+5. **Synthesize** — English report.md + two comments on the PR:
+   - **The report** — one comment, edited in place on every re-review so the PR
+     never fills up with stale reports. It opens with a `Review complete` line
+     carrying the timestamp, round number and reviewed commit.
+   - **A round ping** — a short new comment per round with the headline numbers
+     (verdict, risks, doc errors, claim breakdown) and a link up to the report.
+     GitHub raises no notification for an edit, so this is the only part that
+     actually reaches subscribers. Disable with `--no-ping`, or
+     `ping_comment: false` in `autoreview.yml`.
 
 ## Running tests
 
@@ -234,6 +247,14 @@ launchd example (auto-start on login, every 2 minutes):
 ```
 
 `scripts/autoreview-once.sh` sources `.env` (API key stays out of the plist).
+
+**Parallel reviews.** `max_parallel` in `autoreview.yml` (default `1`, cap `8`)
+sets how many PRs one pass reviews at a time; `1` is the old sequential
+behaviour. Each review runs in its own process, and `review.lock` is per-PR, so
+two different PRs never share a workspace or a comment. The useful ceiling is
+your model API concurrency rather than CPU — roughly 80% of a review's wall
+time is spent waiting on the model. `review_timeout_minutes` (default `30`)
+kills a hung review so it cannot hold a slot forever.
 Install:
 
 ```bash
